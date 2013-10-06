@@ -46,7 +46,7 @@ noteIndicator.append('text').attr(
 	fill: '#fff'
 	x: 900
 	y: 100
-).text('y0')
+)
 
 indicate = (note) ->
 	noteIndicator.select('text').text(note)

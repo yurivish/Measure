@@ -74,7 +74,7 @@
     fill: '#fff',
     x: 900,
     y: 100
-  }).text('y0');
+  });
 
   indicate = function(note) {
     noteIndicator.select('text').text(note);
