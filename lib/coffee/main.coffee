@@ -32,6 +32,34 @@ d exercise
 
 sel = d3.select('#notes').append('g').attr('transform', 'translate(25, 25)')
 
+noteIndicator = sel.append('g')
+noteIndicator.append('circle').attr(
+	fill: '#333'
+	cx: 900
+	cy: 100
+
+)
+noteIndicator.append('text').attr(
+	'text-anchor': 'middle'
+	dy: '.35em'
+	fill: '#fff'
+	x: 900
+	y: 100
+).text('y0')
+
+indicate = (note) ->
+	noteIndicator.select('text').text(note)
+
+	noteIndicator.select('circle').attr(
+		r: 60
+		fill: '#ccc'
+	)
+	.interrupt().transition().duration(300).ease('cubic-out')
+	.attr(
+		r: 50
+		fill: '#333'
+	)
+
 visExercise = (exercise) ->
 	update = sel.selectAll('.section').data(exercise)
 	enter = update.enter().append('g').attr(class: 'section')
@@ -60,10 +88,12 @@ visExercise = (exercise) ->
 
 	i = 0
 	d3.select('body').on('keypress', ->
+
 		w = 800
 		p = 1
 		s = w / 8 - p
 		note = d3.select('.note:nth-child(' + i++ + ')')
+		indicate(note.select('text').text())
 
 		note.select('.after')
 			.transition().duration(300).ease('cubic-out')
