@@ -53,51 +53,77 @@ initInstrument = ->
 			dispatch.error(false, err)
 	)
 
-	nextId = do ->
+	tag = do ->
 		next = 0
 		(type) -> type + '.internal_' + next++
 
-	untilTrue = (type, fn) ->
-		id = nextId(type)
-		dispatch.on(id, (args...) ->
-			if fn(args...)
-				dispatch.on(id, null)
+	fulfillWhen = (defer, type, condition) ->
+		type = tag(type)
+		dispatch.on(type, (args...) ->
+			if condition(args...)
+				defer.resolve()
+				dispatch.on(type, null)
 		)
 
 	dispatch.waitForPress = (key) ->
 		d 'waiting for', key
 		# TODO: We'll need a way to cancel these, too...
 		makePromise (defer) ->
-			untilTrue('keydown', (e) ->
-				d 'checking for', key
-				if e.key == key
-					defer.resolve() 
-					true
-			)
+			fulfillWhen defer, 'keydown' , (e) -> e.key == key
 
 	dispatch
 
 # 72 = middle C
 
+notes = [ ]
+visualize = ->
+	now = Date.now()
+	time = d3.scale.linear().domain([d3.min(notes, (d) -> d.time), now]).range([0, 900])
+	update = d3.select('#notes').selectAll('.note').data(notes)
+	enter = update.enter().append('rect').attr(class: 'note')
+	update.attr(
+		x: (d) -> time(d.time)
+		y: 100
+		width: (d) -> time(d.endTime ? now) - time(d.time)
+		height: 15
+		fill: '#ccc'
+		'fill-opacity': 0.75
+	)
+
+	false
+
+d3.timer(visualize)
+
+active = { }
 initInstrument()
-	.on('keydown', (e) ->
-		d 'Key down:', e.key, 'at speed', e.velocity
+	.on('keydown', ({ key, velocity, time }) ->
+		# d 'Key down:', e.key, 'at speed', e.velocity
+		note = { key, velocity, time }
+		active[key] = note
+		notes.push note
+
 	).on('keyup', (e) ->
-		d 'Key up:', e.key
+		# d 'Key up:', e.key
+		if e.key of active
+			active[e.key].endTime = e.time
 	).on('error', (instrumentMissing, err) ->
 		if instrumentMissing
 			d 'You have no MIDI keyboard.'
 		else
 			d 'Error initializing MIDI connection:', err
 	).on('ready', (instr, input) ->
+		d 'Ready', input
 		ex = [72, 74, 76, 77, 79, 77, 76, 74, 72]
 		ex.reduce(
-			(p, ks, i) -> if i then p.then(-> instr.waitForPress ks) else p.fcall(instr.waitForPress, ks)
+			(q, ks, i) -> 
+				if i == 0
+					q.fcall(-> instr.waitForPress ks)
+				else
+					q.then(-> instr.waitForPress ks)
 			Q
 		).then(->
 			d 'finished!'
 		)
-
 	)
 
 
