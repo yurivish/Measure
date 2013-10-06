@@ -48,42 +48,29 @@
     }
   ];
 
-  exercise.forEach(function(section, i) {
-    if (i) {
-      return section.notesBefore = exercise[i - 1].notesBefore + section.notes.length;
-    } else {
-      return section.notesBefore = 0;
-    }
-  });
-
   d(exercise);
 
   sel = d3.select('#notes').append('g').attr('transform', 'translate(25, 25)');
 
-  noteIndicator = sel.append('g');
+  noteIndicator = sel.append('g').attr('transform', 'translate(950, 100)');
 
   noteIndicator.append('circle').attr({
     fill: '#333',
     stroke: '#333',
-    cx: 900,
-    cy: 100
+    r: 50
   });
 
   noteIndicator.append('text').attr({
     'text-anchor': 'middle',
     dy: '.35em',
-    fill: '#fff',
-    x: 900,
-    y: 100
+    fill: '#fff'
   });
 
   indicate = function(note) {
-    noteIndicator.select('text').text(note);
+    noteIndicator.select('text').text(note).attr('transform', 'scale(1.1)').interrupt().transition().duration(600).ease('cubic-out').attr('transform', 'scale(1)');
     return noteIndicator.select('circle').attr({
-      r: 60,
-      stroke: '#ccc'
-    }).interrupt().transition().duration(300).ease('cubic-out').attr({
-      r: 50,
+      stroke: '#888'
+    }).interrupt().transition().duration(600).ease('cubic-out').attr({
       stroke: '#333'
     });
   };
@@ -200,11 +187,10 @@
       s = w / 8 - p;
       note = d3.select('.note:nth-child(' + i++ + ')');
       indicate(note.select('text').text());
-      note.select('.after').transition().duration(300).ease('cubic-out').attr({
-        height: s,
-        y: 0
+      note.select('.after').transition().duration(400).ease('cubic-out').attr({
+        width: s
       });
-      return note.select('text').transition().duration(300).ease('cubic-out').attr('fill', '#000');
+      return note.select('text').transition().duration(400).ease('cubic-out').attr('fill', '#000');
     };
     return initInstrument().on('keydown', pressed).on('error', function(instrumentMissing, err) {
       if (instrumentMissing) {
@@ -231,10 +217,9 @@
       fill: '#343434'
     });
     enter.append('rect').attr({
-      height: 0,
-      width: s,
+      height: s,
+      width: 0,
       "class": 'after',
-      y: s,
       fill: '#ccc'
     });
     enter.append('text').attr({
