@@ -131,19 +131,32 @@ visExercise = (exercise) ->
 	i = 1
 	pressed =  ->
 
+		if i > 1
+			prevnote = d3.select('.note:nth-child(' + (i - 1) + ')')
+			prevnote.select('.after').interrupt()
+			prevnote.select('.before').attr('fill', 'red')
+
 		w = 800
 		p = 1
 		s = w / 8 - p
 		note = d3.select('.note:nth-child(' + i++ + ')')
 		indicate(note.select('text').text())
 
-		note.select('.after')
+		note.select('.after').interrupt()
 			.transition().duration(400).ease('linear')#.ease('cubic-out')
-			.attr(width: s)
+			.attr(width: -> s - d3.select(this).attr('x'))
 
 		note.select('text')
 			.transition().duration(400).ease('linear')#.ease('cubic-out')
 			.attr('fill', '#000')
+
+		# nextnote = d3.select('.note:nth-child(' + i + ')')
+		# # nextnote.select('.before')
+		# nextnote.select('.after')
+		# 	.transition().delay(400).duration(400).ease('linear')#.ease('cubic-out')
+		# 	.attr(x: s)
+
+
 	initInstrument()
 		.on('keydown', pressed)
 		.on('error', (instrumentMissing, err) ->

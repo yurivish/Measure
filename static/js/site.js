@@ -181,14 +181,21 @@
     });
     i = 1;
     pressed = function() {
-      var note, p, s, w;
+      var note, p, prevnote, s, w;
+      if (i > 1) {
+        prevnote = d3.select('.note:nth-child(' + (i - 1) + ')');
+        prevnote.select('.after').interrupt();
+        prevnote.select('.before').attr('fill', 'red');
+      }
       w = 800;
       p = 1;
       s = w / 8 - p;
       note = d3.select('.note:nth-child(' + i++ + ')');
       indicate(note.select('text').text());
-      note.select('.after').transition().duration(400).ease('linear').attr({
-        width: s
+      note.select('.after').interrupt().transition().duration(400).ease('linear').attr({
+        width: function() {
+          return s - d3.select(this).attr('x');
+        }
       });
       return note.select('text').transition().duration(400).ease('linear').attr('fill', '#000');
     };
