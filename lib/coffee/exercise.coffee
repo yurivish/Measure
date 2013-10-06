@@ -149,7 +149,6 @@ initInstrument()
 		else
 			d 'Error initializing MIDI connection:', err
 	).on('ready', (instr, input) ->
-		d 'Ready', input
 		ex = [72, 74, 76, 77, 79, 77, 76, 74, 72]
 		ex.reduce(
 			(q, ks, i) -> 
