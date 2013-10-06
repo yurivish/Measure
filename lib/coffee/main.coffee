@@ -64,12 +64,13 @@ visExercise = (exercise) ->
 		p = 1
 		s = w / 8 - p
 		note = d3.select('.note:nth-child(' + i++ + ')')
+
 		note.select('.after')
-			.transition().duration(300)
+			.transition().duration(300).ease('cubic-out')
 			.attr(height: s, y: 0)
 
 		note.select('text')
-			.transition().duration(300)
+			.transition().duration(300).ease('cubic-out')
 			.attr('fill', '#000')
 	)
 
@@ -83,8 +84,8 @@ visSection = (section, i) ->
 	update = d3.select(this).selectAll('.note').data(section.notes)
 	enter = update.enter().append('g').attr(class: 'note')
 	# enter.append('circle').attr(r: s / 2, cx: s/2, cy: s/2)
-	enter.append('rect').attr(height: s, width: s, class: 'before')
-	enter.append('rect').attr(height: 0, width: s, class: 'after', y: s)
+	enter.append('rect').attr(height: s, width: s, class: 'before', fill: '#343434')
+	enter.append('rect').attr(height: 0, width: s, class: 'after', y: s, fill: '#ccc')
 	enter.append('text').attr('text-anchor': 'middle', x: s/2, y: s/2, dy: '.35em', fill: '#ddd')
 		.text(-> ['C', 'D', 'E', 'F#'][~~(Math.random() * 4)])
 

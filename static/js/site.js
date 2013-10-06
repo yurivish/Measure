@@ -94,11 +94,11 @@
       p = 1;
       s = w / 8 - p;
       note = d3.select('.note:nth-child(' + i++ + ')');
-      note.select('.after').transition().duration(300).attr({
+      note.select('.after').transition().duration(300).ease('cubic-out').attr({
         height: s,
         y: 0
       });
-      return note.select('text').transition().duration(300).attr('fill', '#000');
+      return note.select('text').transition().duration(300).ease('cubic-out').attr('fill', '#000');
     });
   };
 
@@ -114,13 +114,15 @@
     enter.append('rect').attr({
       height: s,
       width: s,
-      "class": 'before'
+      "class": 'before',
+      fill: '#343434'
     });
     enter.append('rect').attr({
       height: 0,
       width: s,
       "class": 'after',
-      y: s
+      y: s,
+      fill: '#ccc'
     });
     enter.append('text').attr({
       'text-anchor': 'middle',
