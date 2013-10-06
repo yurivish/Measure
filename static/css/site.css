@@ -1,7 +1,6 @@
 *{padding:0;margin:0}
 @font-face{font-family:DINWeb;src:url("../font/DINWeb.eot")}
 @font-face{font-family:DINWeb;src:url("../font/DINWeb.woff") format("woff")}
-#notes text{font-family:Helvetica Neue,Helvetica;font-weight:100;font-size:36px}
+#notes text{font-family:Helvetica Neue,Helvetica;font-size:36px}
 #notes .section .note{shape-rendering:crispEdges;circlerect}
-#notes .section .note text{font-family:Helvetica Neue,Helvetica;font-weight:100;font-size:36px}
 

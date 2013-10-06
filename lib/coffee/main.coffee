@@ -102,6 +102,12 @@ initInstrument = ->
 
 	dispatch
 
+
+w = 800
+px = 0
+py = 25
+s = w / 8 - px
+
 visExercise = (exercise) ->
 	update = sel.selectAll('.section').data(exercise)
 	enter = update.enter().append('g').attr(class: 'section')
@@ -129,6 +135,7 @@ visExercise = (exercise) ->
 	d3.select('#notes').attr(height: rect.top + rect.height)
 
 	i = 1
+
 	pressed =  ->
 
 		if i > 1
@@ -136,9 +143,7 @@ visExercise = (exercise) ->
 			prevnote.select('.after').interrupt()
 			prevnote.select('.before').attr('fill', 'red')
 
-		w = 800
-		p = 1
-		s = w / 8 - p
+
 		note = d3.select('.note:nth-child(' + i++ + ')')
 		indicate(note.select('text').text())
 
@@ -149,6 +154,7 @@ visExercise = (exercise) ->
 		note.select('text')
 			.transition().duration(400).ease('linear')#.ease('cubic-out')
 			.attr('fill', '#000')
+			.attr('fill', '#333')
 
 		# nextnote = d3.select('.note:nth-child(' + i + ')')
 		# # nextnote.select('.before')
@@ -170,22 +176,19 @@ visExercise = (exercise) ->
 
 visSection = (section, i) ->
 
-	w = 800
-	p = 1
-	s = w / 8 - p
-
 	update = d3.select(this).selectAll('.note').data(section.notes)
 	enter = update.enter().append('g').attr(class: 'note')
 	# enter.append('circle').attr(r: s / 2, cx: s/2, cy: s/2)
-	enter.append('rect').attr(height: s, width: s, class: 'before', fill: '#343434')
-	enter.append('rect').attr(height: s, width: 0, class: 'after', fill: '#ccc')
+	enter.append('rect').attr(height: s, width: s, class: 'before', fill: '#000', stroke: '#333')
+	# enter.append('line').attr(x1: s, x2: s, y1: 0, y2: s, stroke: '#333')
+	enter.append('rect').attr(height: s, width: 0, class: 'after', fill: '#333')
 	enter.append('text').attr('text-anchor': 'middle', x: s/2, y: s/2, dy: '.35em', fill: '#ddd')
 		.text(-> ['C', 'D', 'E', 'F#'][~~(Math.random() * 4)])
 
 	update.attr(
 		transform: (d, i) ->
-			x = i * (s + p) % w
-			y = (s + p) *(~~((i / w) * (s + p)))
+			x = i * (s + px) % w
+			y = (s + py) *(~~((i / w) * (s + px)))
 			"translate(#{x}, #{y})"
 	).on('mouseenter', ->
 
