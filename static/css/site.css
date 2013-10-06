@@ -1,3 +1,8 @@
-#notes{background:#222;xdisplay:none}
-#log{position:absolute;bottom:0;left:0;height:200px;width:100%;color:#ddd;overflow:scroll}
+*{padding:0;margin:0}
+@font-face{font-family:DINWeb;src:url("../font/DINWeb.eot")}
+@font-face{font-family:DINWeb;src:url("../font/DINWeb.woff") format("woff")}
+#notes .section .note{shape-rendering:crispEdges;}
+#notes .section .note text{font-family:Helvetica Neue,Helvetica;font-weight:100;font-size:36px}
+#notes .section .note circle,#notes .section .note rect{fill:#343434;}
+#notes .section .note circle.after,#notes .section .note rect.after{fill:#ccc}
 
