@@ -63,6 +63,7 @@
 
   noteIndicator.append('circle').attr({
     fill: '#333',
+    stroke: '#333',
     cx: 900,
     cy: 100
   });
@@ -79,10 +80,10 @@
     noteIndicator.select('text').text(note);
     return noteIndicator.select('circle').attr({
       r: 60,
-      fill: '#ccc'
+      stroke: '#ccc'
     }).interrupt().transition().duration(300).ease('cubic-out').attr({
       r: 50,
-      fill: '#333'
+      stroke: '#333'
     });
   };
 
@@ -114,7 +115,7 @@
     d3.select('#notes').attr({
       height: rect.top + rect.height
     });
-    i = 0;
+    i = 1;
     return d3.select('body').on('keypress', function() {
       var note, p, s, w;
       w = 800;
