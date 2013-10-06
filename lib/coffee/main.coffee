@@ -58,6 +58,20 @@ visExercise = (exercise) ->
 	rect = sel.node().getBoundingClientRect()
 	d3.select('#notes').attr(height: rect.top + rect.height)
 
+	i = 0
+	d3.select('body').on('keypress', ->
+		w = 800
+		p = 1
+		s = w / 8 - p
+		note = d3.select('.note:nth-child(' + i++ + ')')
+		note.select('.after')
+			.transition().duration(300)
+			.attr(height: s, y: 0)
+
+		note.select('text')
+			.transition().duration(300)
+			.attr('fill', '#000')
+	)
 
 
 visSection = (section, i) ->
@@ -80,13 +94,7 @@ visSection = (section, i) ->
 			y = (s + p) *(~~((i / w) * (s + p)))
 			"translate(#{x}, #{y})"
 	).on('mouseenter', ->
-		d3.select(this).select('.after')
-			.transition().duration(300)
-			.attr(height: s, y: 0)
 
-		d3.select(this).select('text')
-			.transition().duration(300)
-			.attr('fill', '#000')
 	)
 
 

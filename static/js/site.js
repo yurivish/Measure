@@ -60,7 +60,7 @@
   sel = d3.select('#notes').append('g').attr('transform', 'translate(25, 25)');
 
   visExercise = function(exercise) {
-    var enter, heightSoFar, rect, update;
+    var enter, heightSoFar, i, rect, update;
     update = sel.selectAll('.section').data(exercise);
     enter = update.enter().append('g').attr({
       "class": 'section'
@@ -84,8 +84,21 @@
       opacity: 1
     });
     rect = sel.node().getBoundingClientRect();
-    return d3.select('#notes').attr({
+    d3.select('#notes').attr({
       height: rect.top + rect.height
+    });
+    i = 0;
+    return d3.select('body').on('keypress', function() {
+      var note, p, s, w;
+      w = 800;
+      p = 1;
+      s = w / 8 - p;
+      note = d3.select('.note:nth-child(' + i++ + ')');
+      note.select('.after').transition().duration(300).attr({
+        height: s,
+        y: 0
+      });
+      return note.select('text').transition().duration(300).attr('fill', '#000');
     });
   };
 
@@ -125,13 +138,7 @@
         y = (s + p) * (~~((i / w) * (s + p)));
         return "translate(" + x + ", " + y + ")";
       }
-    }).on('mouseenter', function() {
-      d3.select(this).select('.after').transition().duration(300).attr({
-        height: s,
-        y: 0
-      });
-      return d3.select(this).select('text').transition().duration(300).attr('fill', '#000');
-    });
+    }).on('mouseenter', function() {});
   };
 
   visExercise(exercise);
