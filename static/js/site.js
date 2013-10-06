@@ -187,10 +187,10 @@
       s = w / 8 - p;
       note = d3.select('.note:nth-child(' + i++ + ')');
       indicate(note.select('text').text());
-      note.select('.after').transition().duration(400).ease('cubic-out').attr({
+      note.select('.after').transition().duration(400).ease('linear').attr({
         width: s
       });
-      return note.select('text').transition().duration(400).ease('cubic-out').attr('fill', '#000');
+      return note.select('text').transition().duration(400).ease('linear').attr('fill', '#000');
     };
     return initInstrument().on('keydown', pressed).on('error', function(instrumentMissing, err) {
       if (instrumentMissing) {

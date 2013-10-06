@@ -138,11 +138,11 @@ visExercise = (exercise) ->
 		indicate(note.select('text').text())
 
 		note.select('.after')
-			.transition().duration(400).ease('cubic-out')
+			.transition().duration(400).ease('linear')#.ease('cubic-out')
 			.attr(width: s)
 
 		note.select('text')
-			.transition().duration(400).ease('cubic-out')
+			.transition().duration(400).ease('linear')#.ease('cubic-out')
 			.attr('fill', '#000')
 	initInstrument()
 		.on('keydown', pressed)
