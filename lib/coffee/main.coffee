@@ -17,7 +17,7 @@ interval = 1000 / bps
 
 notes = exercise.notes.map (key, index) -> { key, index, offset: index * interval }
 
-w = 600
+w = 900
 xpos = d3.scale.linear().domain([0, notes.length - 1]).range([0, w])
 
 parent = d3.select('#notes').append('g').attr('transform', 'translate(25, 225)')

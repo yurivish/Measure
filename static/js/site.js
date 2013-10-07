@@ -175,7 +175,7 @@
     };
   });
 
-  w = 600;
+  w = 900;
 
   xpos = d3.scale.linear().domain([0, notes.length - 1]).range([0, w]);
 
@@ -225,7 +225,7 @@
   });
 
   start = function() {
-    var duration, endTime, error, notePlayed, startTime, timelineScale;
+    var duration, endTime, error, notePlayed, startTime, timeToXAxis;
     startTime = performance.now();
     duration = interval * (notes.length - 1);
     endTime = startTime + duration;
@@ -233,9 +233,9 @@
       transform: "translate(" + w + ", 0)",
       fill: '#fff'
     });
-    timelineScale = d3.scale.linear().domain([0, duration]).range([0, w]);
+    timeToXAxis = d3.scale.linear().domain([0, duration]).range([0, w]);
     error = function(target, val) {
-      return timelineScale(target - val);
+      return timeToXAxis(target - val);
     };
     notePlayed = function(note, time) {
       var err;
