@@ -1,7 +1,3 @@
-makePromise = (fn) ->
-	defer = Q.defer()
-	fn(defer)
-	return defer.promise
 
 expectKey = (k) ->
 	makePromise (defer) ->

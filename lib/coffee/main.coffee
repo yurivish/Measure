@@ -1,200 +1,108 @@
-ascending = _.flatten [
-	major(60)
-	major(72)
-	72 + 12
-]
+exercise = {
+	notes: _.flatten [
+		major(60)
+		# major(72)
+		# 72 + 12 # Top C
+		# major(72).reverse()
+		60 + 12
+		major(60).reverse()
+	]
+}
 
-descending = _.flatten [
-	major(72).reverse()
-	major(60).reverse()
-]
+d 'Exercise:', exercise
 
-exercise = [
-	{
-		direction: 'ascending'
-		notes: ascending.map (key, index) -> { key, index }
-	}
-	{
-		direction: 'descending'
-		notes: descending.map (key, index) -> { key, index }
-	}
-]
+sel = d3.select('#notes')
+	.append('g').attr('transform', 'translate(25, 25)')
 
-d exercise
+instrument = initInstrument()
 
-sel = d3.select('#notes').append('g').attr('transform', 'translate(25, 25)')
 
-noteIndicator = sel.append('g').attr('transform', 'translate(950, 100)')
-noteIndicator.append('circle').attr(
+interval = 500
+notes = exercise.notes.map (key, index) -> { key, index, start: index * interval }
+
+w = 600
+r = w / notes.length / 2 - 5
+
+
+xpos = d3.scale.linear().domain([0, notes.length]).range([0, w])
+
+timeline = sel.append('line').attr(x1: xpos(0), x2: xpos(notes.length - 1), y1: r * 2, y2: r * 2)
+timecircle = sel.append('circle').attr(cx: xpos(0), cy: r * 2, r: 5, fill: '#fff')
+
+update = sel.selectAll('.note').data(notes)
+enter = update.enter().append('g').attr(
+	class: 'note'
+	transform: (d, i) ->
+		"translate(#{xpos(i)}, 0)"
+)
+enter.append('circle').attr(
+	r: r
 	fill: '#333'
-	stroke: '#333'
-	r: 50
-)
-noteIndicator.append('text').attr(
-	'text-anchor': 'middle'
-	dy: '.35em'
-	fill: '#fff'
 )
 
-# Idea: Animate notes horizontally, timed so that the ideal playthrough has no animation pauses.
+colorScale = d3.scale.linear()
+	.domain([0, 0.25, 0.5, 0.75, 1])
+	.range(['#333', 'blue', '#888', 'red', '#333'])
+	.interpolate(d3.interpolateLab)
 
-indicate = (note) ->
-	noteIndicator.select('text').text(note)
-		.attr('transform', 'scale(1.1)')
-		.interrupt().transition().duration(600).ease('cubic-out')
-		.attr('transform', 'scale(1)')
+start = ->
+	tag = do (i = 0) -> (s) -> s + '.exercise_' + i++
 
-	noteIndicator.select('circle').attr(
-		stroke: '#888'
-		# transform: 'scale(1.1)'
-	)
-	.interrupt().transition().duration(600).ease('cubic-out')
-	.attr(
-		stroke: '#333'
-		# transform: 'scale(1)'
-	)
+	update.each (d, i) ->
+		if i
+			d3.select(this).select('circle')
+				.transition()
+				.duration(interval)
+				.delay(d.start - interval)
+				.tween('fill', (d) ->
+					pressed = false
+					evt = tag('keydown')
+					instrument.on(evt, -> pressed = true)
+					this.setAttribute 'stroke', '#ccc'
 
+					(t) ->
 
-initInstrument = ->
-	dispatch = d3.dispatch 'ready', 'keydown', 'keyup', 'error'
-	navigator.requestMIDIAccess().then(
-		(midi) ->
-			inputs = midi.inputs()
-			if inputs.length
-				inputs[0].onmidimessage = (e) ->
-					[cmd, key, velocity] = e.data
-					if cmd == 144 && velocity > 0
-						# MIDI: Note on
-						dispatch.keydown { key, velocity, time: e.timeStamp, event: e }
-					else if cmd == 128 || (cmd == 144 && velocity == 0)
-						# MIDI: Note off || Note on with velocity 0 (some instruments are known to do this.)
-						dispatch.keyup { key, time: e.timeStamp, event: e }
-				d 'Ready:', inputs[0]
-				dispatch.ready(dispatch, inputs[0])
-			else
-				dispatch.error(true, null)
+						if not pressed
+							this.setAttribute 'fill', colorScale(t)
 
-		(err) ->
-			dispatch.error(false, err)
-	)
+						if t == 1
+							instrument.on(evt, null)
+				)
+		else
+			d3.select(this).select('circle').attr('fill', colorScale(0.5))
 
-	d3.select(document)
-		.on('keydown', -> dispatch.keydown({ key: 72, velocity: 50, time: Date.now(), event: null }))
-		.on('keyup', -> dispatch.keyup({ key: 72, time: Date.now(), event: null }))
+instrument.on('keydown.start', ->
+	start()
+	timecircle.transition().duration(interval * (notes.length - 1)).ease('linear').attr('cx': xpos(notes.length - 1))
+	instrument.on('keydown.start', null)
+)
+	# .then((data) ->
 
-	tag = do ->
-		next = 0
-		(type) -> type + '.internal_' + next++
-
-	fulfillWhen = (defer, type, condition) ->
-		type = tag(type)
-		dispatch.on(type, (args...) ->
-			if condition(args...)
-				defer.resolve()
-				dispatch.on(type, null)
-		)
-
-	dispatch.waitForPress = (key) ->
-		d 'waiting for', key
-		# TODO: We'll need a way to cancel these, too...
-		makePromise (defer) ->
-			fulfillWhen defer, 'keydown' , (e) -> e.key == key
-
-	dispatch
-
-
-w = 800
-px = 0
-py = 25
-s = w / 8 - px
-
-visExercise = (exercise) ->
-	update = sel.selectAll('.section').data(exercise)
-	enter = update.enter().append('g').attr(class: 'section')
-
-	heightSoFar = 0
-
-	update
-		.each(visSection)
-		.attr(
-			transform: (d, i) ->
-				padding = 25
-				offset = heightSoFar
-				rect = this.getBoundingClientRect()
-				heightSoFar += rect.height + padding
-				"translate(0, #{ offset })"
-		)
-
-	sel.selectAll('.note')
-		.attr(opacity: 1e-6)
-		.transition().duration(600)
-		.delay((d, i) -> i * 20)
-		.attr(opacity: 1)
-
-	rect = sel.node().getBoundingClientRect()
-	d3.select('#notes').attr(height: rect.top + rect.height)
-
-	i = 1
-
-	pressed =  ->
-
-		if i > 1
-			prevnote = d3.select('.note:nth-child(' + (i - 1) + ')')
-			prevnote.select('.after').interrupt()
-			prevnote.select('.before').attr('fill', 'red')
-
-
-		note = d3.select('.note:nth-child(' + i++ + ')')
-		indicate(note.select('text').text())
-
-		note.select('.after').interrupt()
-			.transition().duration(400).ease('linear')#.ease('cubic-out')
-			.attr(width: -> s - d3.select(this).attr('x'))
-
-		note.select('text')
-			.transition().duration(400).ease('linear')#.ease('cubic-out')
-			.attr('fill', '#000')
-			.attr('fill', '#333')
-
-		# nextnote = d3.select('.note:nth-child(' + i + ')')
-		# # nextnote.select('.before')
-		# nextnote.select('.after')
-		# 	.transition().delay(400).duration(400).ease('linear')#.ease('cubic-out')
-		# 	.attr(x: s)
-
-
-	initInstrument()
-		.on('keydown', pressed)
-		.on('error', (instrumentMissing, err) ->
-			if instrumentMissing
-				d 'You have no MIDI keyboard.'
-			else
-				d 'Error initializing MIDI connection:', err
-		)
+	# )
 
 
 
-visSection = (section, i) ->
-
-	update = d3.select(this).selectAll('.note').data(section.notes)
-	enter = update.enter().append('g').attr(class: 'note')
-	# enter.append('circle').attr(r: s / 2, cx: s/2, cy: s/2)
-	enter.append('rect').attr(height: s, width: s, class: 'before', fill: '#000', stroke: '#333')
-	# enter.append('line').attr(x1: s, x2: s, y1: 0, y2: s, stroke: '#333')
-	enter.append('rect').attr(height: s, width: 0, class: 'after', fill: '#333')
-	enter.append('text').attr('text-anchor': 'middle', x: s/2, y: s/2, dy: '.35em', fill: '#ddd')
-		.text(-> ['C', 'D', 'E', 'F#'][~~(Math.random() * 4)])
-
-	update.attr(
-		transform: (d, i) ->
-			x = i * (s + px) % w
-			y = (s + py) *(~~((i / w) * (s + px)))
-			"translate(#{x}, #{y})"
-	).on('mouseenter', ->
-
-	)
+# TODO: Investigate high-resolution timers.
 
 
 
+# start = ->
+# 	for note, i in notes
+# 			d3.select(d.el)
+# 				.transition().duration(1000).delay()
+# 				.attrTween
 
-visExercise exercise
+	# notes = [1, 2, 3]
+	# startTime = Date.now() + interval
+	# endTime = startTime + (notes.length - 1) * interval
+	# notesOverTime = d3.scale.threshold()
+	# 	.domain(d3.range(startTime, endTime, interval))
+	# 	.range(notes)
+
+	# complete = false
+	# d3.timer ->
+	# 	now = Date.now()
+	# 	d 'Note:', notesOverTime(now)
+	# 	complete = now > endTime
+	#	complete
+
