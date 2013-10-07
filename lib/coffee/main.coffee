@@ -14,6 +14,8 @@ instrument = initInstrument()
 bpm = 180
 bps = bpm / 60
 interval = 1000 / bps
+d interval
+
 notes = exercise.notes.map (key, index) -> { key, index, offset: index * interval }
 
 w = 600
@@ -44,21 +46,19 @@ enter.append('circle').attr(
 update.each (d) -> d.sel = d3.select(this)
 
 colorScale = d3.scale.linear()
-	.domain([-25, 0, 25])
+	.domain([-10, 0, 10])
 	.range(['#ff0000', '#fff', '#009eff'])
 	.interpolate(d3.interpolateLab)
 	.clamp(true)
 
-# TODO: http://www.w3.org/TR/hr-time/
-# window.performance.webkitNow()
-
 timeline = parent.append('line').attr(class: 'timeline', x1: 0, y1: -25, x2: 0, y2: 25, stroke: '#fff')
 start = ->
-	startTime = Date.now()
+	startTime = performance.now()
 	duration = interval * (notes.length - 1)
 	endTime = startTime + duration
 
-	trans = timeline
+	# How accurate is this, really, given what we know about Javascript time?
+	timeline
 		.transition()
 		.duration(duration)
 		.ease('linear')
@@ -86,7 +86,7 @@ start = ->
 		note.pressedAt = time
 
 	instrument.on('keydown', (e) ->
-		now = Date.now()
+		now = performance.now()
 		index = Math.floor (now - startTime) / interval
 		prevNote = notes[index]
 		nextNote = notes[index + 1]
@@ -99,7 +99,6 @@ start = ->
 
 		if selectedNote
 			notePlayed selectedNote, e.time
-			trans.attr('stroke', '#fff')
 	)
 
 	notePlayed(notes[0], startTime)

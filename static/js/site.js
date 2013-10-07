@@ -17,6 +17,10 @@
     });
   };
 
+  window.performance = window.performance || {};
+
+  window.performance.now = performance.now || performance.webkitNow || performance.msNow || performance.oNow || performance.mozNow || Date.now;
+
   Theory = function() {};
 
   notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -60,13 +64,13 @@
             return dispatch.keydown({
               key: key,
               velocity: velocity,
-              time: e.timeStamp,
+              time: e.receivedTime,
               event: e
             });
           } else if (cmd === 128 || (cmd === 144 && velocity === 0)) {
             return dispatch.keyup({
               key: key,
-              time: e.timeStamp,
+              time: e.receivedTime,
               event: e
             });
           }
@@ -105,14 +109,14 @@
         return dispatch.keydown({
           key: (_ref1 = keys[down++]) != null ? _ref1 : 72,
           velocity: 50,
-          time: Date.now(),
+          time: performance.now(),
           event: null
         });
       }).on('keyup.instrument', function() {
         var _ref1;
         return dispatch.keyup({
           key: (_ref1 = keys[up++]) != null ? _ref1 : 72,
-          time: Date.now(),
+          time: performance.now(),
           event: null
         });
       });
@@ -150,6 +154,8 @@
   bps = bpm / 60;
 
   interval = 1000 / bps;
+
+  d(interval);
 
   notes = exercise.notes.map(function(key, index) {
     return {
@@ -197,7 +203,7 @@
     return d.sel = d3.select(this);
   });
 
-  colorScale = d3.scale.linear().domain([-25, 0, 25]).range(['#ff0000', '#fff', '#009eff']).interpolate(d3.interpolateLab).clamp(true);
+  colorScale = d3.scale.linear().domain([-10, 0, 10]).range(['#ff0000', '#fff', '#009eff']).interpolate(d3.interpolateLab).clamp(true);
 
   timeline = parent.append('line').attr({
     "class": 'timeline',
@@ -209,11 +215,11 @@
   });
 
   start = function() {
-    var duration, endTime, error, notePlayed, startTime, timelineScale, trans;
-    startTime = Date.now();
+    var duration, endTime, error, notePlayed, startTime, timelineScale;
+    startTime = performance.now();
     duration = interval * (notes.length - 1);
     endTime = startTime + duration;
-    trans = timeline.transition().duration(duration).ease('linear').attr({
+    timeline.transition().duration(duration).ease('linear').attr({
       transform: "translate(" + w + ", 0)",
       fill: '#fff'
     });
@@ -231,7 +237,7 @@
     };
     instrument.on('keydown', function(e) {
       var index, nextNote, now, prevNote, selectedNote;
-      now = Date.now();
+      now = performance.now();
       index = Math.floor((now - startTime) / interval);
       prevNote = notes[index];
       nextNote = notes[index + 1];
@@ -242,8 +248,7 @@
         selectedNote = nextNote;
       }
       if (selectedNote) {
-        notePlayed(selectedNote, e.time);
-        return trans.attr('stroke', '#fff');
+        return notePlayed(selectedNote, e.time);
       }
     });
     return notePlayed(notes[0], startTime);

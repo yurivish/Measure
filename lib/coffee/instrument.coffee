@@ -14,10 +14,10 @@ initInstrument = ->
 					if cmd == 144 && velocity > 0
 						# MIDI: Note on
 						d 'Key down:', key
-						dispatch.keydown { key, velocity, time: e.timeStamp, event: e }
+						dispatch.keydown { key, velocity, time: e.receivedTime, event: e }
 					else if cmd == 128 || (cmd == 144 && velocity == 0)
 						# MIDI: Note off || Note on with velocity 0 (some instruments are known to do this.)
-						dispatch.keyup { key, time: e.timeStamp, event: e }
+						dispatch.keyup { key, time: e.receivedTime, event: e }
 				d 'Ready:', inputs[0] # BUG: Without the statement, the instrument fails to initlalize.
 				dispatch.ready(dispatch, inputs[0])
 			else
@@ -44,9 +44,9 @@ initInstrument = ->
 		up = down = 0
 		d3.select(document)
 			.on('keydown.instrument', ->
-				dispatch.keydown({ key: keys[down++] ? 72, velocity: 50, time: Date.now(), event: null }))
+				dispatch.keydown({ key: keys[down++] ? 72, velocity: 50, time: performance.now(), event: null }))
 			.on('keyup.instrument', -> 
-				dispatch.keyup({ key: keys[up++] ? 72, time: Date.now(), event: null }))
+				dispatch.keyup({ key: keys[up++] ? 72, time: performance.now(), event: null }))
 
 	dispatch.watch = (name, listener) ->
 		id = tag(name)
