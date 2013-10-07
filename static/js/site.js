@@ -212,6 +212,7 @@
     };
     notePlayed = function(note, time) {
       var err;
+      note.sel.select('.anim').transition().ease('cubic-out').duration(600).attr('r', 20).attr('fill-opacity', 1e-6);
       err = error(time, startTime + note.offset);
       note.sel.moveToBack();
       note.sel.select('.indicator').transition().ease('cubic-out').duration(200).attr('fill', colorScale(err)).attr('r', 3 + Math.abs(err));
@@ -230,7 +231,6 @@
         selectedNote = nextNote;
       }
       if (selectedNote) {
-        selectedNote.sel.select('.anim').transition().ease('cubic-out').duration(600).attr('r', 20).attr('fill-opacity', 1e-6);
         return notePlayed(selectedNote, e.time);
       }
     });

@@ -65,6 +65,14 @@ start = ->
 		timelineScale(target - val)
 
 	notePlayed = (note, time) ->
+		note.sel.select('.anim')
+			.transition()
+			.ease('cubic-out')
+			.duration(600)
+			.attr('r', 20)
+			.attr('fill-opacity', 1e-6)
+
+
 		err = error(time, startTime + note.offset)
 
 		note.sel.moveToBack()
@@ -87,13 +95,6 @@ start = ->
 			selectedNote = nextNote
 
 		if selectedNote
-			selectedNote.sel.select('.anim')
-				.transition()
-				.ease('cubic-out')
-				.duration(600)
-				.attr('r', 20)
-				.attr('fill-opacity', 1e-6)
-
 			notePlayed selectedNote, e.time
 	)
 
