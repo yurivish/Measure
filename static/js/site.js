@@ -5,6 +5,18 @@
 
   window._d = window.d = (_ref = typeof console !== "undefined" && console !== null ? console.log.bind(console) : void 0) != null ? _ref : function() {};
 
+  d3.selection.prototype.moveToFront = function() {
+    return this.each(function() {
+      return this.parentNode.appendChild(this);
+    });
+  };
+
+  d3.selection.prototype.moveToBack = function() {
+    return this.each(function() {
+      return this.parentNode.insertBefore(this, this.parentNode.firstChild);
+    });
+  };
+
   Theory = function() {};
 
   notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -67,20 +79,6 @@
     }, function(err) {
       return dispatch.error(false, err);
     });
-    d3.select(document).on('keydown', function() {
-      return dispatch.keydown({
-        key: 72,
-        velocity: 50,
-        time: Date.now(),
-        event: null
-      });
-    }).on('keyup', function() {
-      return dispatch.keyup({
-        key: 72,
-        time: Date.now(),
-        event: null
-      });
-    });
     tag = (function() {
       var next;
       next = 0;
@@ -97,6 +95,26 @@
           defer.resolve();
           return dispatch.on(type, null);
         }
+      });
+    };
+    dispatch.fakeKeys = function(keys) {
+      var down, up;
+      up = down = 0;
+      return d3.select(document).on('keydown.instrument', function() {
+        var _ref1;
+        return dispatch.keydown({
+          key: (_ref1 = keys[down++]) != null ? _ref1 : 72,
+          velocity: 50,
+          time: Date.now(),
+          event: null
+        });
+      }).on('keyup.instrument', function() {
+        var _ref1;
+        return dispatch.keyup({
+          key: (_ref1 = keys[up++]) != null ? _ref1 : 72,
+          time: Date.now(),
+          event: null
+        });
       });
     };
     dispatch.watch = function(name, listener) {
@@ -143,15 +161,6 @@
 
   parent = d3.select('#notes').append('g').attr('transform', 'translate(25, 125)');
 
-  timeline = parent.append('line').attr({
-    "class": 'timeline',
-    x1: 0,
-    y1: -25,
-    x2: 0,
-    y2: 25,
-    stroke: '#fff'
-  });
-
   update = parent.selectAll('.note').data(notes);
 
   enter = update.enter().append('g').attr({
@@ -170,34 +179,53 @@
     return d.sel = d3.select(this);
   });
 
-  colorScale = d3.scale.linear().domain([0, 0.5, 1]).range(['blue', '#666', 'red']).interpolate(d3.interpolateLab);
+  colorScale = d3.scale.linear().domain([-25, 0, 25]).range(['#ff0000', '#fff', '#009eff']).interpolate(d3.interpolateLab).clamp(true);
+
+  timeline = parent.append('line').attr({
+    "class": 'timeline',
+    x1: 0,
+    y1: -25,
+    x2: 0,
+    y2: 25,
+    stroke: '#fff'
+  });
 
   start = function() {
-    var startTime;
+    var duration, endTime, error, startTime, timelineScale;
     startTime = Date.now();
-    timeline.transition().duration(interval * (notes.length - 1)).ease('linear').attr({
+    duration = interval * (notes.length - 1);
+    endTime = startTime + duration;
+    timeline.transition().duration(duration).ease('linear').attr({
       transform: "translate(" + w + ", 0)"
     });
+    timelineScale = d3.scale.linear().domain([0, duration]).range([0, w]);
+    error = function(target, val) {
+      return timelineScale(target - val);
+    };
     instrument.on('keydown', function(e) {
-      var index, nextNote, now, prevNote, selectedNote;
+      var err, index, nextNote, now, prevNote, selectedNote;
       now = Date.now();
       index = Math.floor((now - startTime) / interval);
       prevNote = notes[index];
       nextNote = notes[index + 1];
-      if ((prevNote != null) && prevNote.key === e.key) {
+      if ((prevNote != null) && (prevNote.pressedAt == null) && prevNote.key === e.key) {
         selectedNote = prevNote;
       }
-      if ((nextNote != null) && nextNote.key === e.key) {
+      if ((nextNote != null) && (nextNote.pressedAt == null) && nextNote.key === e.key) {
         selectedNote = nextNote;
       }
       if (selectedNote) {
-        selectedNote.sel.select('circle').attr('fill', 'red');
+        err = error(e.time, startTime + selectedNote.offset);
+        selectedNote.sel.moveToBack();
+        selectedNote.sel.select('circle').transition().ease('cubic-out').duration(200).attr('fill', colorScale(err)).attr('r', 3 + Math.abs(err));
         return selectedNote.pressedAt = e.time;
       }
     });
     notes[0].sel.select('circle').attr('fill', 'red');
     return d3.transition;
   };
+
+  instrument.fakeKeys(exercise.notes);
 
   startId = instrument.watch('keydown', function() {
     start();

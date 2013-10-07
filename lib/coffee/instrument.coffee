@@ -27,9 +27,6 @@ initInstrument = ->
 			dispatch.error(false, err)
 	)
 
-	d3.select(document)
-		.on('keydown', -> dispatch.keydown({ key: 72, velocity: 50, time: Date.now(), event: null }))
-		.on('keyup', -> dispatch.keyup({ key: 72, time: Date.now(), event: null }))
 
 	tag = do ->
 		next = 0
@@ -42,6 +39,14 @@ initInstrument = ->
 				defer.resolve()
 				dispatch.on(type, null)
 		)
+
+	dispatch.fakeKeys = (keys) ->
+		up = down = 0
+		d3.select(document)
+			.on('keydown.instrument', ->
+				dispatch.keydown({ key: keys[down++] ? 72, velocity: 50, time: Date.now(), event: null }))
+			.on('keyup.instrument', -> 
+				dispatch.keyup({ key: keys[up++] ? 72, time: Date.now(), event: null }))
 
 	dispatch.watch = (name, listener) ->
 		id = tag(name)

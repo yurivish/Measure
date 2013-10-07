@@ -5,7 +5,7 @@ static/css/site.css: lib/styl/*.styl
 
 static/js/site.js: lib/coffee/*.coffee
 	node_modules/.bin/coffee -cj static/js/site.js \
-		lib/coffee/debug.coffee \
+		lib/coffee/util.coffee \
 		lib/coffee/theory.coffee \
 		lib/coffee/instrument.coffee \
 		lib/coffee/main.coffee
