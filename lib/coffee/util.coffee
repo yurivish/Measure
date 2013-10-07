@@ -1,19 +1,40 @@
-window._d = window.d = console?.log.bind(console) ? ->
+_d = d = console?.log.bind(console) ? ->
 
 d3.selection.prototype.moveToFront = -> this.each -> this.parentNode.appendChild(this)
 d3.selection.prototype.moveToBack = -> this.each -> this.parentNode.insertBefore this, this.parentNode.firstChild
 
-# Returns the number of milliseconds elapsed since either the browser navigationStart event or 
-# the UNIX epoch, depending on availability.
-# Where the browser supports 'performance' we use that as it is more accurate (microsoeconds
-# will be returned in the fractional part) and more reliable as it does not rely on the system time. 
-# Where 'performance' is not available, we will fall back to Date().getTime().
-window.performance = window.performance || { }
-window.performance.now = 
-	performance.now    	      ||
-	performance.webkitNow     ||
-	performance.msNow         ||
-	performance.oNow          ||
-	performance.mozNow        ||
+performance = performance or { }
+performance.now = 
+	performance.now or
+	performance.webkitNow or
+	performance.msNow or
+	performance.oNow or
+	performance.mozNow or
 	Date.now
-	 
+	
+requestAnimationFrame = window.requestAnimationFrame or
+	window.webkitRequestAnimationFrame or
+	window.mozRequestAnimationFrame or
+	window.oRequestAnimationFrame or
+	window.msRequestAnimationFrame or
+	(cb) -> setTimeout(cb, 16)
+
+cancelAnimationFrame = window.cancelAnimationFrame or
+	window.webkitCancelAnimationFrame or
+	window.mozCancelAnimationFrame or
+	window.oCancelAnimationFrame or
+	window.msCancelAnimationFrame or
+	(num) -> clearTimeout(num)
+
+URL = window.URL or
+	window.webkitURL or
+	window.mozURL or
+	window.oURL or
+	window.msURL
+
+audioContext = window.audioContext or
+	window.webkitAudioContext or
+	window.mozAudioContext or
+	window.oAudioContext or
+	window.msAudioContext
+

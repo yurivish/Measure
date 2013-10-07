@@ -11,15 +11,13 @@ d 'Exercise:', exercise
 
 instrument = initInstrument()
 
-bpm = 180
+bpm = 120
 bps = bpm / 60
 interval = 1000 / bps
-d interval
 
 notes = exercise.notes.map (key, index) -> { key, index, offset: index * interval }
 
 w = 600
-
 xpos = d3.scale.linear().domain([0, notes.length - 1]).range([0, w])
 
 parent = d3.select('#notes').append('g').attr('transform', 'translate(25, 225)')
@@ -58,15 +56,16 @@ start = ->
 	endTime = startTime + duration
 
 	# How accurate is this, really, given what we know about Javascript time?
+	# Is it better to *not* have a visual cue, if we can't have precision?
 	timeline
 		.transition()
 		.duration(duration)
 		.ease('linear')
 		.attr(transform: "translate(#{w}, 0)", fill: '#fff')
 
-	timelineScale = d3.scale.linear().domain([0, duration]).range([0, w])
-	error = (target, val) ->
-		timelineScale(target - val)
+	# Locate a time on the x axis, or get the pixel size of a time slice
+	timeToXAxis = d3.scale.linear().domain([0, duration]).range([0, w])
+	error = (target, val) -> timeToXAxis(target - val)
 
 	notePlayed = (note, time) ->
 		note.sel.select('.anim')
@@ -103,7 +102,7 @@ start = ->
 
 	notePlayed(notes[0], startTime)
 
-instrument.fakeKeys exercise.notes
+instrument.fakeKeys exercise.notes # Listen for computer keyboard events
 
 startId = instrument.watch('keydown', ->
 	start()
