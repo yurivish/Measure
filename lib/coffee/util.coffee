@@ -3,14 +3,15 @@ _d = d = console?.log.bind(console) ? ->
 d3.selection.prototype.moveToFront = -> this.each -> this.parentNode.appendChild(this)
 d3.selection.prototype.moveToBack = -> this.each -> this.parentNode.insertBefore this, this.parentNode.firstChild
 
-performance = performance or { }
-performance.now = 
-	performance.now or
-	performance.webkitNow or
-	performance.msNow or
-	performance.oNow or
-	performance.mozNow or
-	Date.now
+# We use MIDI receivedTime instead; it's as precise as performance time but in seconds fom 1970.
+# performance ?= { }
+# performance.now = 
+# 	performance.now or
+# 	performance.webkitNow or
+# 	performance.msNow or
+# 	performance.oNow or
+# 	performance.mozNow or
+# 	Date.now
 	
 requestAnimationFrame = window.requestAnimationFrame or
 	window.webkitRequestAnimationFrame or

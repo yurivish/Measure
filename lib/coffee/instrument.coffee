@@ -20,7 +20,7 @@ initInstrument = ->
 						dispatch.keyup { key, time: e.receivedTime, event: e }
 				d 'Ready:', inputs[0] # BUG: Without the statement, the instrument fails to initlalize.
 				dispatch.ready(dispatch, inputs[0])
-			else
+			else	
 				dispatch.error(true, null)
 
 		(err) ->

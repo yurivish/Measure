@@ -27,7 +27,6 @@ Metronome = do ->
 		interval = 60 / bpm
 		lookaheadTime = interval * 2
 		nextNoteTime = audioContext.currentTime
-		schedule()
 		active = true
 		schedule()
 

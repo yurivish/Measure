@@ -50,8 +50,7 @@ colorScale = d3.scale.linear()
 	.clamp(true)
 
 timeline = parent.append('line').attr(class: 'timeline', x1: 0, y1: -25, x2: 0, y2: 25, stroke: '#fff')
-start = ->
-	startTime = performance.now()
+start = (startTime) ->
 	duration = interval * (notes.length - 1)
 	endTime = startTime + duration
 
@@ -85,8 +84,7 @@ start = ->
 		note.pressedAt = time
 
 	instrument.on('keydown', (e) ->
-		now = performance.now()
-		index = Math.floor (now - startTime) / interval
+		index = Math.floor (e.time - startTime) / interval
 		prevNote = notes[index]
 		nextNote = notes[index + 1]
 
@@ -103,10 +101,12 @@ start = ->
 	notePlayed(notes[0], startTime)
 
 	Metronome.start(bpm)
+	setTimeout Metronome.stop, duration
+
 
 instrument.fakeKeys exercise.notes # Listen for computer keyboard events
 
-startId = instrument.watch('keydown', ->
-	start()
+startId = instrument.watch('keydown', (e) ->
+	start(e.time)
 	instrument.unwatch(startId)
 )
