@@ -29,8 +29,15 @@ enter = update.enter().append('g').attr(
 )
 
 enter.append('circle').attr(
+	class: 'indicator'
 	r: 3
 	fill: '#fff'
+)
+enter.append('circle').attr(
+	class: 'anim'
+	r: 3
+	fill: '#fff'
+	'fill-opacity': 1
 )
 update.each (d) -> d.sel = d3.select(this)
 
@@ -57,6 +64,16 @@ start = ->
 	error = (target, val) ->
 		timelineScale(target - val)
 
+	notePlayed = (note, time) ->
+		err = error(time, startTime + note.offset)
+
+		note.sel.moveToBack()
+		note.sel.select('.indicator')
+			.transition().ease('cubic-out').duration(200)
+			.attr('fill', colorScale(err))
+			.attr('r', 3 + Math.abs(err))
+		note.pressedAt = time
+
 	instrument.on('keydown', (e) ->
 		now = Date.now()
 		index = Math.floor (now - startTime) / interval
@@ -65,40 +82,22 @@ start = ->
 
 		if prevNote? and not prevNote.pressedAt? and prevNote.key == e.key
 			selectedNote = prevNote
+
 		if nextNote? and not nextNote.pressedAt? and nextNote.key == e.key
 			selectedNote = nextNote
 
 		if selectedNote
-			err = error(e.time, startTime + selectedNote.offset)
+			selectedNote.sel.select('.anim')
+				.transition()
+				.ease('cubic-out')
+				.duration(600)
+				.attr('r', 20)
+				.attr('fill-opacity', 1e-6)
 
-			selectedNote.sel.moveToBack()
-			selectedNote.sel.select('circle')
-				.transition().ease('cubic-out').duration(200)
-				.attr('fill', colorScale(err))
-				.attr('r', 3 + Math.abs(err))
-			selectedNote.pressedAt = e.time
+			notePlayed selectedNote, e.time
 	)
 
-	notes[0].sel.select('circle').attr('fill', 'red')
-
-	# update.select('circle')
-	# 	.transition()
-	# 	.duration(interval)
-	# 	.delay((d) -> d.offset)
-	# 	.tween 'exercise', (d) ->
-	# 		landed = false
-	# 		id = instrument.watch 'keydown', (e) ->
-	# 			landed = true
-	# 			_d 'Note landed. Error:', Date.now() - (startTime + d.offset)
-	# 		(t) ->
-	# 			if landed
-	# 				d3.select(this).interrupt()
-	# 			else
-	# 				0
-	# 				# this.setAttribute 'fill', colorScale(t)
-	# 			instrument.unwatch(id) if t == 1 # TODO: Also if the note landed.
-
-	d3.transition
+	notePlayed(notes[0], startTime)
 
 instrument.fakeKeys exercise.notes
 

@@ -171,8 +171,16 @@
   });
 
   enter.append('circle').attr({
+    "class": 'indicator',
     r: 3,
     fill: '#fff'
+  });
+
+  enter.append('circle').attr({
+    "class": 'anim',
+    r: 3,
+    fill: '#fff',
+    'fill-opacity': 1
   });
 
   update.each(function(d) {
@@ -191,7 +199,7 @@
   });
 
   start = function() {
-    var duration, endTime, error, startTime, timelineScale;
+    var duration, endTime, error, notePlayed, startTime, timelineScale;
     startTime = Date.now();
     duration = interval * (notes.length - 1);
     endTime = startTime + duration;
@@ -202,8 +210,15 @@
     error = function(target, val) {
       return timelineScale(target - val);
     };
+    notePlayed = function(note, time) {
+      var err;
+      err = error(time, startTime + note.offset);
+      note.sel.moveToBack();
+      note.sel.select('.indicator').transition().ease('cubic-out').duration(200).attr('fill', colorScale(err)).attr('r', 3 + Math.abs(err));
+      return note.pressedAt = time;
+    };
     instrument.on('keydown', function(e) {
-      var err, index, nextNote, now, prevNote, selectedNote;
+      var index, nextNote, now, prevNote, selectedNote;
       now = Date.now();
       index = Math.floor((now - startTime) / interval);
       prevNote = notes[index];
@@ -215,14 +230,11 @@
         selectedNote = nextNote;
       }
       if (selectedNote) {
-        err = error(e.time, startTime + selectedNote.offset);
-        selectedNote.sel.moveToBack();
-        selectedNote.sel.select('circle').transition().ease('cubic-out').duration(200).attr('fill', colorScale(err)).attr('r', 3 + Math.abs(err));
-        return selectedNote.pressedAt = e.time;
+        selectedNote.sel.select('.anim').transition().ease('cubic-out').duration(600).attr('r', 20).attr('fill-opacity', 1e-6);
+        return notePlayed(selectedNote, e.time);
       }
     });
-    notes[0].sel.select('circle').attr('fill', 'red');
-    return d3.transition;
+    return notePlayed(notes[0], startTime);
   };
 
   instrument.fakeKeys(exercise.notes);
