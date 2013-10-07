@@ -8,6 +8,7 @@ static/js/site.js: lib/coffee/*.coffee
 		lib/coffee/util.coffee \
 		lib/coffee/theory.coffee \
 		lib/coffee/instrument.coffee \
+		lib/coffee/metronome.coffee \
 		lib/coffee/main.coffee
 
 uglify: node_modules/uglify-js/bin/uglifyjs static/js/site.js

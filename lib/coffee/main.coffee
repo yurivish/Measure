@@ -102,6 +102,8 @@ start = ->
 
 	notePlayed(notes[0], startTime)
 
+	Metronome.start(bpm)
+
 instrument.fakeKeys exercise.notes # Listen for computer keyboard events
 
 startId = instrument.watch('keydown', ->
