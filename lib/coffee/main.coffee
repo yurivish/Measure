@@ -46,63 +46,19 @@ colorScale = d3.scale.linear()
 	.interpolate(d3.interpolateLab)
 
 start = ->
-	tag = do (i = 0) -> (s) -> s + '.exercise_' + i++
+	update.select('circle')
+		.transition()
+		.duration(interval)
+		.delay((d) -> d.start)
+		.tween 'exercise', (d) ->
+			landed = false
+			id = instrument.watch('keydown', (e) -> landed = true)
+			(t) ->
+				this.setAttribute 'fill', colorScale(t)
+				d3.select(this).interrupt() if landed
+				instrument.unwatch(id) if t == 1
 
-	update.each (d, i) ->
-		if i
-			d3.select(this).select('circle')
-				.transition()
-				.duration(interval)
-				.delay(d.start - interval)
-				.tween('fill', (d) ->
-					pressed = false
-					evt = tag('keydown')
-					instrument.on(evt, -> pressed = true)
-					this.setAttribute 'stroke', '#ccc'
-
-					(t) ->
-
-						if not pressed
-							this.setAttribute 'fill', colorScale(t)
-
-						if t == 1
-							instrument.on(evt, null)
-				)
-		else
-			d3.select(this).select('circle').attr('fill', colorScale(0.5))
-
-instrument.on('keydown.start', ->
+startId = instrument.watch('keydown', ->
 	start()
-	timecircle.transition().duration(interval * (notes.length - 1)).ease('linear').attr('cx': xpos(notes.length - 1))
-	instrument.on('keydown.start', null)
+	instrument.unwatch(startId)
 )
-	# .then((data) ->
-
-	# )
-
-
-
-# TODO: Investigate high-resolution timers.
-
-
-
-# start = ->
-# 	for note, i in notes
-# 			d3.select(d.el)
-# 				.transition().duration(1000).delay()
-# 				.attrTween
-
-	# notes = [1, 2, 3]
-	# startTime = Date.now() + interval
-	# endTime = startTime + (notes.length - 1) * interval
-	# notesOverTime = d3.scale.threshold()
-	# 	.domain(d3.range(startTime, endTime, interval))
-	# 	.range(notes)
-
-	# complete = false
-	# d3.timer ->
-	# 	now = Date.now()
-	# 	d 'Note:', notesOverTime(now)
-	# 	complete = now > endTime
-	#	complete
-

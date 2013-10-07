@@ -43,6 +43,14 @@ initInstrument = ->
 				dispatch.on(type, null)
 		)
 
+	dispatch.watch = (name, listener) ->
+		id = tag(name)
+		dispatch.on(id, listener)
+		id
+		
+	dispatch.unwatch = (id) ->
+		dispatch.on(id, null)
+
 	dispatch.waitForPress = (key) ->
 		d 'waiting for', key
 		# TODO: We'll need a way to cancel these, too...
