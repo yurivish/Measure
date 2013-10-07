@@ -11,53 +11,80 @@ exercise = {
 
 d 'Exercise:', exercise
 
-sel = d3.select('#notes')
-	.append('g').attr('transform', 'translate(25, 25)')
-
 instrument = initInstrument()
 
-
 interval = 500
-notes = exercise.notes.map (key, index) -> { key, index, start: index * interval }
+notes = exercise.notes.map (key, index) -> { key, index, offset: index * interval }
 
 w = 600
-r = w / notes.length / 2 - 5
 
+xpos = d3.scale.linear().domain([0, notes.length - 1]).range([0, w])
 
-xpos = d3.scale.linear().domain([0, notes.length]).range([0, w])
-
-timeline = sel.append('line').attr(x1: xpos(0), x2: xpos(notes.length - 1), y1: r * 2, y2: r * 2)
-timecircle = sel.append('circle').attr(cx: xpos(0), cy: r * 2, r: 5, fill: '#fff')
-
-update = sel.selectAll('.note').data(notes)
+parent = d3.select('#notes').append('g').attr('transform', 'translate(25, 125)')
+timeline = parent.append('line').attr(class: 'timeline', x1: 0, y1: -25, x2: 0, y2: 25, stroke: '#fff')
+update = parent.selectAll('.note').data(notes)
 enter = update.enter().append('g').attr(
 	class: 'note'
 	transform: (d, i) ->
 		"translate(#{xpos(i)}, 0)"
 )
+
 enter.append('circle').attr(
-	r: r
-	fill: '#333'
+	r: 3
+	fill: '#fff'
 )
+update.each (d) -> d.sel = d3.select(this)
 
 colorScale = d3.scale.linear()
-	.domain([0, 0.25, 0.5, 0.75, 1])
-	.range(['#333', 'blue', '#888', 'red', '#333'])
+	.domain([0, 0.5, 1])
+	.range(['blue', '#666', 'red'])
 	.interpolate(d3.interpolateLab)
 
-start = ->
-	update.select('circle')
-		.transition()
-		.duration(interval)
-		.delay((d) -> d.start)
-		.tween 'exercise', (d) ->
-			landed = false
-			id = instrument.watch('keydown', (e) -> landed = true)
-			(t) ->
-				this.setAttribute 'fill', colorScale(t)
-				d3.select(this).interrupt() if landed
-				instrument.unwatch(id) if t == 1
 
+start = ->
+	startTime = Date.now()
+	timeline
+		.transition()
+		.duration(interval * (notes.length - 1))
+		.ease('linear')
+		.attr(transform: "translate(#{w}, 0)")
+
+	instrument.on('keydown', (e) ->
+		now = Date.now()
+		index = Math.floor (now - startTime) / interval
+		prevNote = notes[index]
+		nextNote = notes[index + 1]
+
+		if prevNote? and prevNote.key == e.key
+			selectedNote = prevNote
+		if nextNote? and nextNote.key == e.key
+			selectedNote = nextNote
+
+		if selectedNote
+			selectedNote.sel.select('circle').attr('fill', 'red')
+			selectedNote.pressedAt = e.time
+	)
+
+	notes[0].sel.select('circle').attr('fill', 'red')
+
+	# update.select('circle')
+	# 	.transition()
+	# 	.duration(interval)
+	# 	.delay((d) -> d.offset)
+	# 	.tween 'exercise', (d) ->
+	# 		landed = false
+	# 		id = instrument.watch 'keydown', (e) ->
+	# 			landed = true
+	# 			_d 'Note landed. Error:', Date.now() - (startTime + d.offset)
+	# 		(t) ->
+	# 			if landed
+	# 				d3.select(this).interrupt()
+	# 			else
+	# 				0
+	# 				# this.setAttribute 'fill', colorScale(t)
+	# 			instrument.unwatch(id) if t == 1 # TODO: Also if the note landed.
+
+	d3.transition
 startId = instrument.watch('keydown', ->
 	start()
 	instrument.unwatch(startId)
