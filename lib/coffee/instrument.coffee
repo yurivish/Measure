@@ -40,13 +40,16 @@ initInstrument = ->
 				dispatch.on(type, null)
 		)
 
-	dispatch.fakeKeys = (keys) ->
+	dispatch.emulateKeysWithKeyboard = (keys) ->
 		up = down = 0
 		d3.select(document)
-			.on('keydown.instrument', ->
+			.on('keydown.internal', ->
 				dispatch.keydown({ key: keys[down++] ? 72, velocity: 50, time: performance.now(), event: null }))
-			.on('keyup.instrument', -> 
+			.on('keyup.internal', -> 
 				dispatch.keyup({ key: keys[up++] ? 72, time: performance.now(), event: null }))
+
+	dispatch.stopEmulatingKeys = ->
+		d3.select(document).on('keydown.internal', null).on('keyup.internal', null)
 
 	dispatch.watch = (name, listener) ->
 		id = tag(name)
@@ -55,6 +58,13 @@ initInstrument = ->
 		
 	dispatch.unwatch = (id) ->
 		dispatch.on(id, null)
+
+	dispatch.watchOnce = (name, listener) ->
+		id = instrument.watch(name, (e) ->
+			listener(e)
+			dispatch.unwatch(id)
+		)
+		id
 
 	dispatch.waitForPress = (key) ->
 		d 'waiting for', key

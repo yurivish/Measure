@@ -12,6 +12,8 @@ Metronome = do ->
 	playNoteAt = (time) ->
 		osc = audioContext.createOscillator()
 		osc.connect(gainNode)
+		# TODO:
+		# osc.frequency.value = 660.0
 		osc.frequency.tick = 660.0
 
 		osc.noteOn(time)

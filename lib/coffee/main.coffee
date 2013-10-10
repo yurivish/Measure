@@ -1,112 +1,191 @@
-exercise = {
-	notes: _.flatten [
+instrument = initInstrument()
+
+# d3.select('body').on 'click', ->
+_.defer ->
+	d 'Starting'
+	exercise = _.flatten([
 		major(60)
 		major(72)
 		72 + 12 # Top C
 		major(72).reverse()
-	]
-}
+		major(60).reverse()
+	]).map (key, index) -> {
+		key
+		time: index # Time starts at zero and is incremented every beat.
+		hand: 'left'
+	}
 
-d 'Exercise:', exercise
+	opts = do (bpm = 120) -> {
+		bpm: bpm
+		noteInterval: 1000 / (bpm / 60)
+	}
 
-instrument = initInstrument()
-
-bpm = 120
-bps = bpm / 60
-interval = 1000 / bps
-
-notes = exercise.notes.map (key, index) -> { key, index, offset: index * interval }
-
-w = 900
-xpos = d3.scale.linear().domain([0, notes.length - 1]).range([0, w])
-
-parent = d3.select('#notes').append('g').attr('transform', 'translate(25, 225)')
-update = parent.selectAll('.note').data(notes)
-enter = update.enter().append('g').attr(
-	class: 'note'
-	transform: (d, i) ->
-		"translate(#{xpos(i)}, 0)"
-)
-
-enter.append('circle').attr(
-	class: 'indicator'
-	r: 3
-	fill: '#fff'
-	cy: (d) -> -5 * (d.key - notes[0].key)
-)
-enter.append('circle').attr(
-	class: 'anim'
-	r: 3
-	fill: '#fff'
-	'fill-opacity': 1
-	cy: (d) -> -5 * (d.key - notes[0].key)
-)
-update.each (d) -> d.sel = d3.select(this)
-
-colorScale = d3.scale.linear()
-	.domain([-10, 0, 10])
-	.range(['#ff0000', '#fff', '#009eff'])
-	.interpolate(d3.interpolateLab)
-	.clamp(true)
-
-timeline = parent.append('line').attr(class: 'timeline', x1: 0, y1: -25, x2: 0, y2: 25, stroke: '#fff')
-start = (startTime) ->
-	duration = interval * (notes.length - 1)
-	endTime = startTime + duration
-
-	# How accurate is this, really, given what we know about Javascript time?
-	# Is it better to *not* have a visual cue, if we can't have precision?
-	timeline
-		.transition()
-		.duration(duration)
-		.ease('linear')
-		.attr(transform: "translate(#{w}, 0)", fill: '#fff')
-
-	# Locate a time on the x axis, or get the pixel size of a time slice
-	timeToXAxis = d3.scale.linear().domain([0, duration]).range([0, w])
-	error = (target, val) -> timeToXAxis(target - val)
-
-	notePlayed = (note, time) ->
-		note.sel.select('.anim')
-			.transition()
-			.ease('cubic-out')
-			.duration(600)
-			.attr('r', 20)
-			.attr('fill-opacity', 1e-6)
-
-		err = error(time, startTime + note.offset)
-
-		note.sel.moveToBack()
-		note.sel.select('.indicator')
-			.transition().ease('cubic-out').duration(200)
-			.attr('fill', colorScale(err))
-			.attr('r', 3 + Math.abs(err))
-		note.pressedAt = time
-
-	instrument.on('keydown', (e) ->
-		index = Math.floor (e.time - startTime) / interval
-		prevNote = notes[index]
-		nextNote = notes[index + 1]
-
-		if prevNote? and not prevNote.pressedAt? and prevNote.key == e.key
-			selectedNote = prevNote
-
-		if nextNote? and not nextNote.pressedAt? and nextNote.key == e.key
-			selectedNote = nextNote
-
-		if selectedNote
-			notePlayed selectedNote, e.time
+	visualizer = Visualizer(
+		d3.select('#notes').append('g').attr('transform', 'translate(50, 50)')
+		width: 900, height: 400
 	)
 
-	notePlayed(notes[0], startTime)
+	start(exercise, opts)
+		.on('start', (data) ->
+			visualizer.playTimeline(data[data.length - 1].expectedAt)
 
-	Metronome.start(bpm)
-	setTimeout Metronome.stop, duration
+		).on('update', (data) -> visualizer data)
+		.on('complete', (data) ->
+			d 'Complete.'
+		)
+
+	# NOTE: We'll want to record incomplete sessions and aborts, too.
+	# And visits to the site.
+
+start = (exercise, opts) ->
+	dispatch = d3.dispatch 'start', 'update', 'complete'
+	# Session data for this instantiation of the exercise
+	data = exercise.map (note) -> {
+		key: note.key
+		expectedAt: note.time * opts.noteInterval
+		playedAt: null
+	}
+
+	startTime = null # Determined from the first keydown event
+	instrument.on 'keydown.exercise', (e) ->
+		unless startTime?
+			startTime = e.time
+			dispatch.start(data)
+
+		time = e.time - startTime
+		index = findCorrespondingIndex e.key, time
+		if index?
+			note = data[index]
+			note.playedAt = time
+			note.error = note.playedAt - note.expectedAt
+		else
+			data.push {
+				key: e.key
+				expectedAt: null
+				playedAt: time
+			}
+
+		d index
+
+		dispatch.update(data)
+
+	findCorrespondingIndex = (key, time) ->
+		# Return the corresponding note from the exercise, or null if we didn't find one.
+		# For now, scan linearly through the list, taking the closest unplayed matching note
+		# within a temporal window. If there are several close-by notes, prefer the earliest
+		# one inside the window.
+		# NOTE: Extra notes end up at the back, unsorted. We'll want to revise this when we 
+		# implement binary search.
+		timeWindow = 2000
+		for note, index in data
+			# break unless note.playedAt? # Never skip past an unplayed note
+			# If the note matches, was expected, hasn't been played, and is in our window, return it.
+			if note.key == key and note.expectedAt? and not note.playedAt? and Math.abs(note.expectedAt - time) < timeWindow
+				return index
+		return null
+
+	instrument.emulateKeysWithKeyboard exercise.map ({key}) -> key
+
+	# End the exercise once the amount of time that it takes has elapsed
+	duration = (exercise[exercise.length - 1].time + 1) * opts.noteInterval
+	endTimeout = setTimeout ->
+		dispatch.complete(data)
+	, duration
+
+	# Expose an abort method, which ends the exercise early.
+	dispatch.abort = ->
+		instrument.stopEmulatingKeys()
+		instrument.on('keydown.exercise', null)
+		clearTimeout endTimeout
+
+	_.defer -> dispatch.update(data)
+	dispatch
+
+Visualizer = (parent, opts) ->
+	parent.append('g').attr(class: 'notes')
+	timeline = parent.append('line').attr(
+		class: 'timeline'
+		x1: 0, y1: -9999
+		x2: 0, y2: 9999,
+		stroke: 'transparent'
+	)
+
+	{ width, height, defaultNoteRadius } = _.extend opts, { defaultNoteRadius: 3 }
+	{ max, min, abs } = Math
+
+	visualize = (data) ->	
+		x = d3.scale.linear()
+			.domain(d3.extent(data, (d) -> d.expectedAt))
+			.range([0, width])
+
+		y = d3.scale.linear()
+			.domain(d3.extent(data, (d) -> d.key))
+			.range([height, 0]) # Position higher notes higher up
+
+		update = parent.select('.notes').selectAll('.note').data(data)
+		enter = update.enter().append('g').attr(
+			class: 'note'
+			transform: (d) -> "translate(#{x(d.expectedAt ? d.playedAt)}, #{y(d.key)})"
+		)
+
+		enter.append('circle').attr(
+			class: 'indicator'
+			r: defaultNoteRadius
+			fill: '#fff'
+		)
+
+		colorScale = d3.scale.linear()
+			.domain([-1000, 0, 1000])
+			.range(['#ff0000', '#fff', '#009eff'])
+			.interpolate(d3.interpolateLab)
+			.clamp(true)
+
+		errorScale = (error) -> max(abs(x(error)), 3)
+
+		update.select('circle').attr(
+			r: (d) -> _d(d.error); if d.error? then errorScale(d.error) else defaultNoteRadius
+			fill: (d) -> if d.error? then colorScale(d.error) else '#fff'
+		)
+
+		# notePlayed = (note, time) ->
+		# 	note.sel.select('.anim')
+		# 		.transition()
+		# 		.ease('cubic-out')
+		# 		.duration(600)
+		# 		.attr('r', 20)
+		# 		.attr('fill-opacity', 1e-6)
+
+		# 	err = error(time, startTime + note.offset)
+
+		# 	note.sel.moveToBack()
+		# 	note.sel.select('.indicator')
+		# 		.transition().ease('cubic-out').duration(200)
+		# 		.attr('fill', colorScale(err))
+		# 		.attr('r', 3 + Math.abs(err))
+		# 	note.pressedAt = time
+
+		# 	Metronome.start(bpm)
+		# 	setTimeout Metronome.stop, duration
 
 
-instrument.fakeKeys exercise.notes # Listen for computer keyboard events
 
-startId = instrument.watch('keydown', (e) ->
-	start(e.time)
-	instrument.unwatch(startId)
-)
+	visualize.playTimeline = (duration) ->
+		timeline.attr(transform: '', stroke: '#fff')
+		# How accurate is this, given what we know about Javascript time? [It seems to be doing well enough, empirically.]
+		# If we can't have precision, is it better to *not* have a visual cue?
+		timeline
+			.transition()
+			.duration(duration)
+			.ease('linear')
+			.attr(transform: "translate(#{width}, 0)")
+
+	visualize.stopTimeline = ->
+		timeline.attr(stroke: 'transparent')
+
+	visualize
+
+
+# IDEA: "Slow down" / "Speed up" text. In case you are looking at the screen.
+# TODO: Use Firebase to store data, as soon as I have a standard data storage format.
+# [Perhaps store the exercise along with the result, since it's not a huge amount of extra data]
+# TODO: If you do really well, pacman comes and eats your exercise.
