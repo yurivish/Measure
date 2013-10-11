@@ -132,6 +132,7 @@ Visualizer = (parent, opts) ->
 			class: 'indicator'
 			r: defaultNoteRadius
 			fill: '#fff'
+			# TODO: #000, opacity 0, y 5
 		)
 
 		colorScale = d3.scale.linear()
@@ -142,10 +143,11 @@ Visualizer = (parent, opts) ->
 
 		errorScale = (error) -> max(abs(x(error)), 3)
 
-		update.select('circle').attr(
+		update.select('circle').transition().ease('cubic-out').duration(200).attr(
 			r: (d) -> _d(d.error); if d.error? then errorScale(d.error) else defaultNoteRadius
 			fill: (d) -> if d.error? then colorScale(d.error) else '#fff'
 		)
+
 
 		# notePlayed = (note, time) ->
 		# 	note.sel.select('.anim')

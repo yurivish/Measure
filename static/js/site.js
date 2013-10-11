@@ -340,7 +340,7 @@
       errorScale = function(error) {
         return max(abs(x(error)), 3);
       };
-      return update.select('circle').attr({
+      return update.select('circle').transition().ease('cubic-out').duration(200).attr({
         r: function(d) {
           _d(d.error);
           if (d.error != null) {
