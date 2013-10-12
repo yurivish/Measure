@@ -49,7 +49,7 @@ _.defer ->
 			fill: '#999'
 		)
 		enter.append('text').attr(
-			y: 25
+			y: 30
 			fill: '#999'
 		).text((d) -> d.text)
 
