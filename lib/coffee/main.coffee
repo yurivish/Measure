@@ -1,8 +1,9 @@
 instrument = initInstrument()
 
-# d3.select('body').on 'click', ->
+
 _.defer ->
 	d 'Starting'
+
 	exercise = _.flatten([
 		major(60)
 		major(72)
@@ -15,86 +16,60 @@ _.defer ->
 		hand: 'left'
 	}
 
-	opts = do (bpm = 120) -> {
-		bpm: bpm
-		noteInterval: 1000 / (bpm / 60)
-	}
+	bpm = 120
+	noteSize = 1 # Whole notes
 
+	vis = d3.select('#exercise')
 
-	do ->
+	# NOTE: This does not work. The height turns out to be the entire window height. Thought it worked yesterday?
+	{ width, height } = vis.node().getBoundingClientRect()
+	height = 300
+	vis.attr({ width, height })
 
-		vis = d3.select('#exercise')
-		{ width, height } = vis.node().getBoundingClientRect()
-		vis.attr({ width, height })
+	pad = 40
+	metronomeVis = M.metronome()
+		.width(width)
+		.pad(pad)
+		.beats(exercise.length)
+		.bpm(bpm)
+		.vis(vis)
 
-		nome = vis.append('g').attr(class: 'metronome')
-		bpm = 120
-		numBeats = 49
-		beats = for num in [0...numBeats]
-			{ num, text: Theory.notes[num % 12] } # NOTE: Notes and beats are not one-to-one.
+	metronomeVis()
 
-		beatRadius = (d, i) -> 3 # if i % 4 then 2 else 6
+	exerciseVis = M.exercise()
+		.width(width)
+		.height(height)
+		.pad(pad)
+		.bpm(bpm)
+		.noteSize(noteSize)
+		.vis(vis)
 
-		pad = 40 + beatRadius(0)
-		pos = d3.scale.linear().domain([0, 25]).range([pad, width - pad])
-
-		update = nome.selectAll('.beat').data(beats)
-		enter = update.enter().append('g').attr(
-			class: 'beat'
-			transform: (d) -> "translate(#{pos(d.num)}, 25)"
-			opacity: 1e-6
-		)
-		enter.append('circle').attr(
-			r: beatRadius
-			fill: '#999'
-		)
-		# enter.append('text').attr(
-		# 	y: 30
-		# 	fill: '#999'
-		# ).text((d) -> d.text)
-
-		update.transition()
-			.delay((d, i) -> i * 20)
-			.duration(500)
-			.ease('ease-out-expo')
-			.attr({
-				opacity: 1
-
-			})
-		update.exit().remove()
-
-	###
-
-	###
-
-	visualizer = Visualizer(
-		d3.select('#notes').append('g').attr('transform', 'translate(50, 50)')
-		width: 900, height: 400
-	)
-
-	start(exercise, opts)
-		.on('start', (data) ->
-			visualizer.playTimeline(data[data.length - 1].expectedAt)
-
-		).on('update', (data) -> visualizer data)
-		.on('complete', (data) ->
+	start(exercise, bpm, noteSize)
+		.on('start', (notes) ->
+			exerciseVis.startTimeline(notes[notes.length - 1].expectedAt)
+			Metronome.start(120)
+		).on('update', (notes) -> exerciseVis.notes(notes))
+		.on('complete', (notes) ->
 			d 'Complete.'
 		)
 
-	# NOTE: We'll want to record incomplete sessions and aborts, too.
+	# # NOTE: We'll want to record incomplete sessions and aborts, too.
 	# And visits to the site.
 
-start = (exercise, opts) ->
+start = (notes, bpm, noteSize) ->
 	dispatch = d3.dispatch 'start', 'update', 'complete'
-	# Session data for this instantiation of the exercise
-	data = exercise.map (note) -> {
+
+	# Session data for this instantiation of the notes
+	data = notes.map (note) -> {
 		key: note.key
-		expectedAt: note.time * opts.noteInterval
+		expectedAt: note.time * Theory.timeBetweenNotes(bpm, noteSize)
 		playedAt: null
 	}
 
+	d data...
+
 	startTime = null # Determined from the first keydown event
-	instrument.on 'keydown.exercise', (e) ->
+	instrument.on 'keydown.notes', (e) ->
 		unless startTime?
 			startTime = e.time
 			dispatch.start(data)
@@ -112,7 +87,8 @@ start = (exercise, opts) ->
 				playedAt: time
 			}
 
-		d index
+
+		d note
 
 		dispatch.update(data)
 
@@ -131,10 +107,10 @@ start = (exercise, opts) ->
 				return index
 		return null
 
-	instrument.emulateKeysWithKeyboard exercise.map ({key}) -> key
+	instrument.emulateKeysWithKeyboard notes.map ({key}) -> key
 
 	# End the exercise once the amount of time that it takes has elapsed
-	duration = (exercise[exercise.length - 1].time + 1) * opts.noteInterval
+	duration = (notes[notes.length - 1].time) * Theory.timeBetweenNotes(bpm, noteSize)
 	endTimeout = setTimeout ->
 		dispatch.complete(data)
 	, duration
@@ -142,93 +118,150 @@ start = (exercise, opts) ->
 	# Expose an abort method, which ends the exercise early.
 	dispatch.abort = ->
 		instrument.stopEmulatingKeys()
-		instrument.on('keydown.exercise', null)
+		instrument.on('keydown.notes', null)
 		clearTimeout endTimeout
 
 	_.defer -> dispatch.update(data)
 	dispatch
 
-Visualizer = (parent, opts) ->
-	parent.append('g').attr(class: 'notes')
-	timeline = parent.append('line').attr(
-		class: 'timeline'
-		x1: 0, y1: -9999
-		x2: 0, y2: 9999,
-		stroke: 'transparent'
-	)
+M = {
+	metronome: ->
+		opts = {
+			beats: 50
+			width: 300
+			pad: 0
+			bpm: 120
+			vis: null
+		}
 
-	{ width, height, defaultNoteRadius } = _.extend opts, { defaultNoteRadius: 3 }
-	{ max, min, abs } = Math
+		createElements = ->
+			nome = opts.vis.select('.metronome')
+			if nome.empty()
+				nome = opts.vis.append('g').attr(class: 'metronome')
 
-	visualize = (data) ->	
-		x = d3.scale.linear()
-			.domain(d3.extent(data, (d) -> d.expectedAt))
-			.range([0, width])
+		render = ->
+			beats = for num in [0...opts.beats]
+				# NOTE: Notes and beats are not one-to-one.
+				{ num, text: Theory.notes[num % 12] } 
 
-		y = d3.scale.linear()
-			.domain(d3.extent(data, (d) -> d.key))
-			.range([height, 0]) # Position higher notes higher up
+			beatRadius = (d, i) -> 3 # if i % 4 then 2 else 6
 
-		update = parent.select('.notes').selectAll('.note').data(data)
-		enter = update.enter().append('g').attr(
-			class: 'note'
-			transform: (d) -> "translate(#{x(d.expectedAt ? d.playedAt)}, #{y(d.key)})"
-		)
+			x = d3.scale.linear()
+				.domain([0, opts.beats - 1])
+				.range([opts.pad, opts.width - opts.pad])
 
-		enter.append('circle').attr(
-			class: 'indicator'
-			r: defaultNoteRadius
-			fill: '#fff'
-			# TODO: #000, opacity 0, y 5
-		)
+			update = opts.vis.select('.metronome').selectAll('.beat').data(beats)
+			enter = update.enter().append('g').attr(
+				class: 'beat'
+				transform: (d) -> "translate(#{x(d.num)}, 25)" # TODO: - beatRadius(d, i)
+				opacity: 1e-6
+			)
+			enter.append('circle').attr(
+				r: beatRadius
+				fill: '#999'
+			)
+			# enter.append('text').attr(
+			# 	y: 30
+			# 	fill: '#999'
+			# ).text((d) -> d.text)
 
-		colorScale = d3.scale.linear()
-			.domain([-1000, 0, 1000])
-			.range(['#ff0000', '#fff', '#009eff'])
-			.interpolate(d3.interpolateLab)
-			.clamp(true)
+			update.transition()
+				.delay((d, i) -> i * 10)
+				.duration(500)
+				.ease('ease-out-expo')
+				.attr({
+					opacity: 1
 
-		errorScale = (error) -> max(abs(x(error)), 3)
+				})
+			update.exit().remove()
 
-		update.select('circle').transition().ease('cubic-out').duration(200).attr(
-			r: (d) -> _d(d.error); if d.error? then errorScale(d.error) else defaultNoteRadius
-			fill: (d) -> if d.error? then colorScale(d.error) else '#fff'
-		)
+		_.accessors(render, opts)
+			.addAll()
+			.add('vis', createElements)
+			.done()
+
+	exercise: ->
+		opts = {
+			width: 500
+			height: 300
+			pad: 0
+			bpm: 120
+			noteSize: 1
+			noteRadius: 3
+			notes: [ ]
+			vis: null
+		}
+
+		{ max, min, abs } = Math
+
+		createElements = ->
+			vis = opts.vis
+			notes = vis.select('.notes')
+			if notes.empty()
+				notes = vis.append('g').attr(class: 'notes')
+				timeline = vis.append('line').attr(
+					class: 'timeline'
+					x1: 0, y1: -9999
+					x2: 0, y2: 9999,
+					stroke: 'transparent'
+				)
+
+		render = ->
+			data = opts.notes
+			# TODO: Do we want to visualize real time, or with bpm normalized out?
+
+			x = d3.scale.linear()
+				.domain(d3.extent(data, (d) -> d.expectedAt))
+				.range([opts.pad, opts.width - opts.pad])
+
+			y = d3.scale.linear()
+				.domain(d3.extent(data, (d) -> d.key))
+				.range([opts.height, 0]) # Position higher notes higher up
+
+			update = opts.vis.select('.notes').selectAll('.note').data(data)
+			enter = update.enter().append('g').attr(
+				class: 'note'
+				transform: (d) -> "translate(#{x(d.expectedAt ? d.playedAt)}, #{y(d.key)})"
+			)
+
+			enter.append('circle').attr(
+				class: 'indicator'
+				r: opts.noteRadius
+				fill: '#fff'
+			)
+
+			colorScale = d3.scale.linear()
+				.domain([-1000, 0, 1000])
+				.range(['#ff0000', '#fff', '#009eff'])
+				.interpolate(d3.interpolateLab)
+				.clamp(true)
+
+			errorScale = (error) -> max(abs(x(error) - x(0)), 3)
+
+			update.select('circle').transition().ease('cubic-out').duration(200).attr(
+				r: (d) -> if d.error? then errorScale(d.error) else opts.noteRadius
+				fill: (d) -> if d.error? then colorScale(d.error) else '#fff'
+			)
+
+		render.startTimeline = (duration) ->
+			timeline = opts.vis.select('.timeline')
+			# How accurate is this, given what we know about Javascript time? [It seems to be doing well enough, empirically.]
+			# If we can't have precision, is it better to *not* have a visual cue?
+			timeline
+				.attr(transform: "translate(#{opts.pad}, 0)", stroke: '#fff')
+				.transition()
+				.duration(duration)
+				.ease('linear')
+				.attr(transform: "translate(#{opts.width - opts.pad}, 0)")
+
+		render.stopTimeline = ->
+			timeline = opts.vis.select('.timeline')
+			timeline.interrupt().attr(stroke: 'transparent')
+
+		_.accessors(render, opts).addAll()
+			.add('notes', render)
+			.add('vis', createElements)
+			.done()
 
 
-		# notePlayed = (note, time) ->
-		# 	note.sel.select('.anim')
-		# 		.transition()
-		# 		.ease('cubic-out')
-		# 		.duration(600)
-		# 		.attr('r', 20)
-		# 		.attr('fill-opacity', 1e-6)
-
-		# 	err = error(time, startTime + note.offset)
-
-		# 	note.sel.moveToBack()
-		# 	note.sel.select('.indicator')
-		# 		.transition().ease('cubic-out').duration(200)
-		# 		.attr('fill', colorScale(err))
-		# 		.attr('r', 3 + Math.abs(err))
-		# 	note.pressedAt = time
-
-		# 	Metronome.start(bpm)
-		# 	setTimeout Metronome.stop, duration
-
-
-
-	visualize.playTimeline = (duration) ->
-		timeline.attr(transform: '', stroke: '#fff')
-		# How accurate is this, given what we know about Javascript time? [It seems to be doing well enough, empirically.]
-		# If we can't have precision, is it better to *not* have a visual cue?
-		timeline
-			.transition()
-			.duration(duration)
-			.ease('linear')
-			.attr(transform: "translate(#{width}, 0)")
-
-	visualize.stopTimeline = ->
-		timeline.attr(stroke: 'transparent')
-
-	visualize
+}

@@ -16,3 +16,4 @@ major = (start) ->
 	offsets.map (offset) -> start + offset
 
 Theory.notes = notes
+Theory.timeBetweenNotes = (bpm, noteSize) -> noteSize * 1000 / (bpm / 60)
