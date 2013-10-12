@@ -20,6 +20,49 @@ _.defer ->
 		noteInterval: 1000 / (bpm / 60)
 	}
 
+
+	do ->
+
+		vis = d3.select('#exercise')
+		{ width, height } = vis.node().getBoundingClientRect()
+		vis.attr({ width, height })
+
+		nome = vis.append('g').attr(class: 'metronome')
+		bpm = 120
+		numBeats = 49
+		beats = for num in [0...numBeats]
+			{ num }
+
+		pad = 40 + 6 # Large radius
+		pos = d3.scale.linear().domain([0, 35]).range([pad, width - pad])
+
+		update = nome.selectAll('.beat').data(beats)
+		beatRadius = (d, i) -> if i % 4 then 2 else 6
+		update.enter().append('circle').attr(
+			class: 'beat'
+			cx: (d) -> pos(d.num)
+			r: beatRadius
+			cy: 25
+			fill: '#999'
+			# fill: '#666'
+			# fill: '#000'
+			# stroke: '#666'
+			opacity: 1e-6
+		)
+		update.transition()
+			.delay((d, i) -> i * 15)
+			.duration(500)
+			.ease('ease-out-expo')
+			.attr({
+				r: beatRadius
+				opacity: 1
+			})
+		update.exit().remove()
+
+	###
+
+	###
+
 	visualizer = Visualizer(
 		d3.select('#notes').append('g').attr('transform', 'translate(50, 50)')
 		width: 900, height: 400

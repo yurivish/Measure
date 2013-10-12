@@ -221,6 +221,60 @@
         noteInterval: 1000 / (bpm / 60)
       };
     })(120);
+    (function() {
+      var beatRadius, beats, bpm, height, nome, num, numBeats, pad, pos, update, vis, width, _ref1;
+      vis = d3.select('#exercise');
+      _ref1 = vis.node().getBoundingClientRect(), width = _ref1.width, height = _ref1.height;
+      vis.attr({
+        width: width,
+        height: height
+      });
+      nome = vis.append('g').attr({
+        "class": 'metronome'
+      });
+      bpm = 120;
+      numBeats = 49;
+      beats = (function() {
+        var _i, _results;
+        _results = [];
+        for (num = _i = 0; 0 <= numBeats ? _i < numBeats : _i > numBeats; num = 0 <= numBeats ? ++_i : --_i) {
+          _results.push({
+            num: num
+          });
+        }
+        return _results;
+      })();
+      pad = 40 + 6;
+      pos = d3.scale.linear().domain([0, 35]).range([pad, width - pad]);
+      update = nome.selectAll('.beat').data(beats);
+      beatRadius = function(d, i) {
+        if (i % 4) {
+          return 2;
+        } else {
+          return 6;
+        }
+      };
+      update.enter().append('circle').attr({
+        "class": 'beat',
+        cx: function(d) {
+          return pos(d.num);
+        },
+        r: beatRadius,
+        cy: 25,
+        fill: '#999',
+        opacity: 1e-6
+      });
+      update.transition().delay(function(d, i) {
+        return i * 15;
+      }).duration(500).ease('ease-out-expo').attr({
+        r: beatRadius,
+        opacity: 1
+      });
+      return update.exit().remove();
+    })();
+    /*
+    */
+
     visualizer = Visualizer(d3.select('#notes').append('g').attr('transform', 'translate(50, 50)'), {
       width: 900,
       height: 400
