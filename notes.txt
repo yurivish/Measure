@@ -3,3 +3,23 @@ Playing with Measure for the first time at a real piano:
 - Proper fingering is important. I wasn't playing with the right fingering, especially since I was distracted by the visuals.
 - It is just very cool to see your notes on the screen for the first time, at all -- it makes you want to play on the piano to see what patterns you can make
 - It's very hard to keep time purely from the visual of the line coming up to the circle. How can we do better?
+
+Metronome
+
+- Large circle for big tick
+- Small circle for small tick
+- Filled circle for coinciding with a note
+- Hollow circle for not coinciding with a note
+
+History
+	
+	- On the main navigation page, visualize how well you're doing for each type of exercise, as well as how recently it's been practiced (if we want all exercises to be practiced regularly)
+	- Condense playthroughs into a very compact visual representation; perhaps similar to Theo Gray's Disney film single-pixel-width frames
+
+
+
+
+# IDEA: "Slow down" / "Speed up" text. In case you are looking at the screen.
+# TODO: Use Firebase to store data, as soon as I have a standard data storage format.
+# [Perhaps store the exercise along with the result, since it's not a huge amount of extra data]
+# TODO: If you do really well, pacman comes and eats your exercise.

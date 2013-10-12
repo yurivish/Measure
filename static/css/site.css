@@ -1,6 +1,22 @@
-*{padding:0;margin:0}
+*{padding:0;margin:0;box-sizing:border-box}
 @font-face{font-family:DINWeb;src:url("../font/DINWeb.eot")}
 @font-face{font-family:DINWeb;src:url("../font/DINWeb.woff") format("woff")}
+body{font-family:'Gotham A','Gotham B';font-weight:400;font-style:normal;font-size:14px;line-height:30px;color:#fff}
+h1,h2,h3,h4,h5{font-family:'Hoefler Titling A','Hoefler Titling B';font-weight:300;font-style:normal}
+h1,h2{font-size:36px;line-height:36px;}
+h1 .period,h2 .period{color:#f00}
+#header{padding:30px 40px}
+#control-bar{border-top:1px solid #333;border-bottom:1px solid #333;height:125px;display:flex;}
+#control-bar .selects{display:flex;flex-direction:column;border-right:1px solid #333;user-select:none;}
+#control-bar .selects .select{display:flex;max-width:auto;flex:auto;border-bottom:1px solid #333;}
+#control-bar .selects .select:last-child{border-bottom:none}
+#control-bar .selects .select .option{flex:1;min-width:120px;position:relative;line-height:62.5px;padding-left:25px;cursor:pointer;color:#999;}
+#control-bar .selects .select .option.active{color:#fff;font-weight:bold}
+#control-bar .selects .select .option:hover{color:#fff}
+#control-bar .selects .select .option:active{color:#ccc}
+#control-bar .main{padding-left:20px;display:flex;}
+#control-bar .main .play{width:123px}
+#control-bar .main .scale{padding-top:30px;padding-left:20px}
 #notes text{font-family:Helvetica Neue,Helvetica;font-size:36px}
 #notes .timeline{shape-rendering:crispEdges}
 

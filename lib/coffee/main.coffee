@@ -185,9 +185,3 @@ Visualizer = (parent, opts) ->
 		timeline.attr(stroke: 'transparent')
 
 	visualize
-
-
-# IDEA: "Slow down" / "Speed up" text. In case you are looking at the screen.
-# TODO: Use Firebase to store data, as soon as I have a standard data storage format.
-# [Perhaps store the exercise along with the result, since it's not a huge amount of extra data]
-# TODO: If you do really well, pacman comes and eats your exercise.
