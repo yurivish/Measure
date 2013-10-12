@@ -8,9 +8,9 @@ h1 .period,h2 .period{color:#f00}
 #header{padding:30px 40px}
 #control-bar{border-top:1px solid #333;border-bottom:1px solid #333;height:125px;display:flex;}
 #control-bar .selects{display:flex;flex-direction:column;border-right:1px solid #333;user-select:none;}
-#control-bar .selects .select{display:flex;max-width:auto;flex:auto;border-bottom:1px solid #333;}
+#control-bar .selects .select{display:flex;max-width:auto;flex:auto;padding-right:40px;border-bottom:1px solid #333;}
 #control-bar .selects .select:last-child{border-bottom:none}
-#control-bar .selects .select .option{flex:1;min-width:120px;position:relative;line-height:62.5px;padding-left:25px;cursor:pointer;color:#999;}
+#control-bar .selects .select .option{flex:1;min-width:120px;position:relative;line-height:62.5px;padding-left:40px;cursor:pointer;color:#999;}
 #control-bar .selects .select .option.active{color:#fff;font-weight:bold}
 #control-bar .selects .select .option:hover{color:#fff}
 #control-bar .selects .select .option:active{color:#ccc}
