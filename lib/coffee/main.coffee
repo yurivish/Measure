@@ -50,7 +50,7 @@ _.defer ->
 			opacity: 1e-6
 		)
 		update.transition()
-			.delay((d, i) -> i * 15)
+			.delay((d, i) -> i * 20)
 			.duration(500)
 			.ease('ease-out-expo')
 			.attr({

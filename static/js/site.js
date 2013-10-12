@@ -265,7 +265,7 @@
         opacity: 1e-6
       });
       update.transition().delay(function(d, i) {
-        return i * 15;
+        return i * 20;
       }).duration(500).ease('ease-out-expo').attr({
         r: beatRadius,
         opacity: 1
