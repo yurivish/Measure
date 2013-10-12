@@ -248,11 +248,7 @@
         return _results;
       })();
       beatRadius = function(d, i) {
-        if (i % 4) {
-          return 2;
-        } else {
-          return 6;
-        }
+        return 3;
       };
       pad = 40 + beatRadius(0);
       pos = d3.scale.linear().domain([0, 25]).range([pad, width - pad]);
@@ -267,12 +263,6 @@
       enter.append('circle').attr({
         r: beatRadius,
         fill: '#999'
-      });
-      enter.append('text').attr({
-        y: 30,
-        fill: '#999'
-      }).text(function(d) {
-        return d.text;
       });
       update.transition().delay(function(d, i) {
         return i * 20;

@@ -1,25 +1,26 @@
-*{padding:0;margin:0;box-sizing:border-box}
-@font-face{font-family:DINWeb;src:url("../font/DINWeb.eot")}
-@font-face{font-family:DINWeb;src:url("../font/DINWeb.woff") format("woff")}
+*{padding:0;margin:0;-webkit-box-sizing:border-box;-moz-box-sizing:border-box;box-sizing:border-box}
+::selection{background:#f00;color:#fff;fill:#fff}
+::-moz-selection{background:#f00;color:#fff;fill:#fff}
 body{font-family:'Gotham A','Gotham B';font-weight:400;font-style:normal;font-size:14px;line-height:30px;color:#fff}
 h1,h2,h3,h4,h5{font-family:'Hoefler Titling A','Hoefler Titling B';font-weight:300;font-style:normal}
-h1,h2{font-size:36px;line-height:36px;}
-h1 .period,h2 .period{color:#f00}
+h1,h2{font-size:36px;line-height:36px}
+.logo{display:inline-block;}
+.logo .period{color:#f00}
 #page #header{padding:30px 40px}
-#page #control-bar{border-top:1px solid #333;border-bottom:1px solid #333;height:125px;display:flex;}
-#page #control-bar .selects{display:flex;flex-direction:column;border-right:1px solid #333;user-select:none;}
-#page #control-bar .selects .select{display:flex;max-width:auto;flex:auto;padding-right:40px;border-bottom:1px solid #333;}
+#page #control-bar{border-top:1px solid #333;border-bottom:1px solid #333;height:125px;display:-webkit-box;display:-moz-box;display:-webkit-flex;display:-ms-flexbox;display:box;display:flex;}
+#page #control-bar .selects{display:-webkit-box;display:-moz-box;display:-webkit-flex;display:-ms-flexbox;display:box;display:flex;-webkit-box-orient:vertical;-moz-box-orient:vertical;-o-box-orient:vertical;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;border-right:1px solid #333;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;}
+#page #control-bar .selects .select{display:-webkit-box;display:-moz-box;display:-webkit-flex;display:-ms-flexbox;display:box;display:flex;max-width:auto;-webkit-box-flex:1;-moz-box-flex:1;-o-box-flex:1;box-flex:1;-webkit-flex:auto;-ms-flex:auto;flex:auto;padding-right:40px;border-bottom:1px solid #333;}
 #page #control-bar .selects .select:last-child{border-bottom:none}
-#page #control-bar .selects .select .option{flex:1;min-width:120px;position:relative;line-height:62.5px;padding-left:40px;cursor:pointer;color:#999;}
+#page #control-bar .selects .select .option{-webkit-box-flex:1;-moz-box-flex:1;-o-box-flex:1;box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:120px;position:relative;line-height:62.5px;padding-left:40px;cursor:pointer;color:#999;}
 #page #control-bar .selects .select .option:hover{color:#fff}
 #page #control-bar .selects .select .option:active{color:#ccc}
 #page #control-bar .selects .select .option.active{color:#fff;font-weight:bold}
-#page #control-bar .main{padding-top:35px;display:flex;}
-#page #control-bar .main .play{width:75px;height:75px;margin:0 40px;margin-top:-10px;user-select:none;}
+#page #control-bar .main{padding-top:35px;display:-webkit-box;display:-moz-box;display:-webkit-flex;display:-ms-flexbox;display:box;display:flex;}
+#page #control-bar .main .play{width:75px;height:75px;margin:0 40px;margin-top:-10px;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;}
 #page #control-bar .main .play circle{fill:#1a1a1a;stroke-width:2;stroke:#808080;cursor:pointer;}
 #page #control-bar .main .play circle:hover{stroke:#b3b3b3;}
 #page #control-bar .main .play circle:hover + polygon{fill:#fff}
-#page #control-bar .main .play circle:active{stroke:#999}
+#page #control-bar .main .play circle:active{stroke:#999;fill:#000}
 #page #control-bar .main .play polygon{fill:#eee;pointer-events:none}
 #page #exercise .metronome text{text-anchor:middle;font-size:12px}
 #page #notes text{font-family:Helvetica Neue,Helvetica;font-size:36px}

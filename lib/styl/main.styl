@@ -1,16 +1,19 @@
+@import 'nib'
+@import 'nib/gradients'
+
 *
 	padding 0
 	margin 0
 	box-sizing border-box
 
-@font-face
-	font-family DINWeb
-	src url("../font/DINWeb.eot")
-
-
-@font-face
-	font-family DINWeb
-	src url("../font/DINWeb.woff") format("woff")
+::selection 
+	background #ff0000
+	color #fff
+	fill #fff
+::-moz-selection 
+	background #ff0000
+	color #fff
+	fill #fff
 
 body
 	font-family: 'Gotham A', 'Gotham B'; font-weight: 400; font-style: normal;
@@ -27,9 +30,19 @@ h1, h2
 	font-size 36px
 	line-height 36px
 
-	// For the logo
+.logo
+	display inline-block
+	// transform-origin: 0% 0%
+	// transform: rotate(0deg)
+	// transition transform 0.25s ease-out
+
+	// &:hover
+	// 	// transform: translate(0, 2px) rotate(2deg)
+	// 	transform: rotate(25deg)
+
 	.period
 		color #ff0000
+
 
 #page
 
@@ -105,6 +118,7 @@ h1, h2
 
 					&:active
 						stroke #999
+						fill #000
 
 				polygon // triangle
 					fill #eee

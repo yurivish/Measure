@@ -31,9 +31,9 @@ _.defer ->
 		bpm = 120
 		numBeats = 49
 		beats = for num in [0...numBeats]
-			{ num, text: Theory.notes[num % 12] }
+			{ num, text: Theory.notes[num % 12] } # NOTE: Notes and beats are not one-to-one.
 
-		beatRadius = (d, i) -> if i % 4 then 2 else 6
+		beatRadius = (d, i) -> 3 # if i % 4 then 2 else 6
 
 		pad = 40 + beatRadius(0)
 		pos = d3.scale.linear().domain([0, 25]).range([pad, width - pad])
@@ -48,10 +48,10 @@ _.defer ->
 			r: beatRadius
 			fill: '#999'
 		)
-		enter.append('text').attr(
-			y: 30
-			fill: '#999'
-		).text((d) -> d.text)
+		# enter.append('text').attr(
+		# 	y: 30
+		# 	fill: '#999'
+		# ).text((d) -> d.text)
 
 		update.transition()
 			.delay((d, i) -> i * 20)
