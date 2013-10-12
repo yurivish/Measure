@@ -11,9 +11,9 @@ h1 .period,h2 .period{color:#f00}
 #control-bar .selects .select{display:flex;max-width:auto;flex:auto;padding-right:40px;border-bottom:1px solid #333;}
 #control-bar .selects .select:last-child{border-bottom:none}
 #control-bar .selects .select .option{flex:1;min-width:120px;position:relative;line-height:62.5px;padding-left:40px;cursor:pointer;color:#999;}
-#control-bar .selects .select .option.active{color:#fff;font-weight:bold}
 #control-bar .selects .select .option:hover{color:#fff}
 #control-bar .selects .select .option:active{color:#ccc}
+#control-bar .selects .select .option.active{color:#fff;font-weight:bold}
 #control-bar .main{padding-top:35px;display:flex;}
 #control-bar .main .play{width:75px;height:75px;margin:0 40px;margin-top:-10px}
 #notes text{font-family:Helvetica Neue,Helvetica;font-size:36px}
