@@ -15,7 +15,13 @@ h1 .period,h2 .period{color:#f00}
 #page #control-bar .selects .select .option:active{color:#ccc}
 #page #control-bar .selects .select .option.active{color:#fff;font-weight:bold}
 #page #control-bar .main{padding-top:35px;display:flex;}
-#page #control-bar .main .play{width:75px;height:75px;margin:0 40px;margin-top:-10px}
+#page #control-bar .main .play{width:75px;height:75px;margin:0 40px;margin-top:-10px;user-select:none;}
+#page #control-bar .main .play circle{fill:#1a1a1a;stroke-width:2;stroke:#808080;cursor:pointer;}
+#page #control-bar .main .play circle:hover{stroke:#b3b3b3;}
+#page #control-bar .main .play circle:hover + polygon{fill:#fff}
+#page #control-bar .main .play circle:active{stroke:#999}
+#page #control-bar .main .play polygon{fill:#eee;pointer-events:none}
+#page #exercise .metronome text{text-anchor:middle;font-size:12px}
 #page #notes text{font-family:Helvetica Neue,Helvetica;font-size:36px}
 #page #notes .timeline{shape-rendering:crispEdges}
 

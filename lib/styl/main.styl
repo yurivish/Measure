@@ -90,6 +90,25 @@ h1, h2
 				margin 0 40px
 				margin-top -10px
 
+				user-select none
+
+				circle
+					fill #1a1a1a
+					stroke-width 2
+					stroke #808080
+					cursor pointer
+
+					&:hover
+						stroke #b3b3b3
+						+ polygon
+							fill #fff
+
+					&:active
+						stroke #999
+
+				polygon // triangle
+					fill #eee
+					pointer-events none
 
 
 				// flex auto
@@ -101,6 +120,13 @@ h1, h2
 		// 		.option
 
 		// .main
+
+	#exercise
+		.metronome
+			text
+				// fill #fff
+				text-anchor middle
+				font-size 12px
 
 
 	#notes

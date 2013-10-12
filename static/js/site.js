@@ -50,6 +50,8 @@
     });
   };
 
+  Theory.notes = notes;
+
   makePromise = function(fn) {
     var defer;
     defer = Q.defer();
@@ -222,7 +224,7 @@
       };
     })(120);
     (function() {
-      var beatRadius, beats, bpm, height, nome, num, numBeats, pad, pos, update, vis, width, _ref1;
+      var beatRadius, beats, bpm, enter, height, nome, num, numBeats, pad, pos, update, vis, width, _ref1;
       vis = d3.select('#exercise');
       _ref1 = vis.node().getBoundingClientRect(), width = _ref1.width, height = _ref1.height;
       vis.attr({
@@ -239,14 +241,12 @@
         _results = [];
         for (num = _i = 0; 0 <= numBeats ? _i < numBeats : _i > numBeats; num = 0 <= numBeats ? ++_i : --_i) {
           _results.push({
-            num: num
+            num: num,
+            text: Theory.notes[num % 12]
           });
         }
         return _results;
       })();
-      pad = 40 + 6;
-      pos = d3.scale.linear().domain([0, 35]).range([pad, width - pad]);
-      update = nome.selectAll('.beat').data(beats);
       beatRadius = function(d, i) {
         if (i % 4) {
           return 2;
@@ -254,20 +254,29 @@
           return 6;
         }
       };
-      update.enter().append('circle').attr({
+      pad = 40 + beatRadius(0);
+      pos = d3.scale.linear().domain([0, 25]).range([pad, width - pad]);
+      update = nome.selectAll('.beat').data(beats);
+      enter = update.enter().append('g').attr({
         "class": 'beat',
-        cx: function(d) {
-          return pos(d.num);
+        transform: function(d) {
+          return "translate(" + (pos(d.num)) + ", 25)";
         },
-        r: beatRadius,
-        cy: 25,
-        fill: '#999',
         opacity: 1e-6
+      });
+      enter.append('circle').attr({
+        r: beatRadius,
+        fill: '#999'
+      });
+      enter.append('text').attr({
+        y: 25,
+        fill: '#999'
+      }).text(function(d) {
+        return d.text;
       });
       update.transition().delay(function(d, i) {
         return i * 20;
       }).duration(500).ease('ease-out-expo').attr({
-        r: beatRadius,
         opacity: 1
       });
       return update.exit().remove();

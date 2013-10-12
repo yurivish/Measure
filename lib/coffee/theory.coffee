@@ -15,3 +15,4 @@ major = (start) ->
 	offsets = do (note = 0) -> (note += inc for inc in incs)
 	offsets.map (offset) -> start + offset
 
+Theory.notes = notes

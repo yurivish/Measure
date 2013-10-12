@@ -31,31 +31,35 @@ _.defer ->
 		bpm = 120
 		numBeats = 49
 		beats = for num in [0...numBeats]
-			{ num }
+			{ num, text: Theory.notes[num % 12] }
 
-		pad = 40 + 6 # Large radius
-		pos = d3.scale.linear().domain([0, 35]).range([pad, width - pad])
+		beatRadius = (d, i) -> if i % 4 then 2 else 6
+
+		pad = 40 + beatRadius(0)
+		pos = d3.scale.linear().domain([0, 25]).range([pad, width - pad])
 
 		update = nome.selectAll('.beat').data(beats)
-		beatRadius = (d, i) -> if i % 4 then 2 else 6
-		update.enter().append('circle').attr(
+		enter = update.enter().append('g').attr(
 			class: 'beat'
-			cx: (d) -> pos(d.num)
-			r: beatRadius
-			cy: 25
-			fill: '#999'
-			# fill: '#666'
-			# fill: '#000'
-			# stroke: '#666'
+			transform: (d) -> "translate(#{pos(d.num)}, 25)"
 			opacity: 1e-6
 		)
+		enter.append('circle').attr(
+			r: beatRadius
+			fill: '#999'
+		)
+		enter.append('text').attr(
+			y: 25
+			fill: '#999'
+		).text((d) -> d.text)
+
 		update.transition()
 			.delay((d, i) -> i * 20)
 			.duration(500)
 			.ease('ease-out-expo')
 			.attr({
-				r: beatRadius
 				opacity: 1
+
 			})
 		update.exit().remove()
 
