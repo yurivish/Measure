@@ -44,9 +44,11 @@ initInstrument = ->
 		up = down = 0
 		d3.select(document)
 			.on('keydown.internal', ->
-				dispatch.keydown({ key: keys[down++] ? 72, velocity: 50, time: performance.now(), event: null }))
+				if d3.event.keyCode == 32
+					dispatch.keydown({ key: keys[down++] ? 72, velocity: 50, time: performance.now(), event: null }))
 			.on('keyup.internal', -> 
-				dispatch.keyup({ key: keys[up++] ? 72, time: performance.now(), event: null }))
+				if d3.event.keyCode == 32
+					dispatch.keyup({ key: keys[up++] ? 72, time: performance.now(), event: null }))
 
 	dispatch.stopEmulatingKeys = ->
 		d3.select(document).on('keydown.internal', null).on('keyup.internal', null)

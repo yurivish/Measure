@@ -23,8 +23,8 @@ _.defer ->
 
 	# NOTE: This does not work. The height turns out to be the entire window height. Thought it worked yesterday?
 	{ width, height } = vis.node().getBoundingClientRect()
-	height = 300
-	vis.attr({ width, height })
+	height = 200
+	vis.attr({ width, height: height + 150 })
 
 	pad = 40
 	metronomeVis = M.metronome()
@@ -42,16 +42,29 @@ _.defer ->
 		.pad(pad)
 		.bpm(bpm)
 		.noteSize(noteSize)
-		.vis(vis)
+		.vis(vis.append('g').attr('transform', 'translate(0, 100)'))
 
-	start(exercise, bpm, noteSize)
-		.on('start', (notes) ->
-			exerciseVis.startTimeline(notes[notes.length - 1].expectedAt)
-			Metronome.start(120)
-		).on('update', (notes) -> exerciseVis.notes(notes))
-		.on('complete', (notes) ->
-			d 'Complete.'
-		)
+	ex = null
+	arm = ->
+		ex = start(exercise, bpm, noteSize)
+			.on('start', (notes) ->
+				exerciseVis.startTimeline(notes[notes.length - 1].expectedAt)
+				Metronome.start(bpm)
+			).on('update', (notes) -> exerciseVis.notes(notes))
+			.on('complete', (notes) ->
+				Metronome.stop() # BUG: seems to stop before the last note is played
+				d 'Complete.'
+			)
+	arm()
+
+	key 'a', ->
+		ex.abort()
+		exerciseVis.stopTimeline()
+
+	key 'r', ->
+		ex.abort()
+		exerciseVis.stopTimeline()
+		arm()
 
 	# # NOTE: We'll want to record incomplete sessions and aborts, too.
 	# And visits to the site.
@@ -65,8 +78,6 @@ start = (notes, bpm, noteSize) ->
 		expectedAt: note.time * Theory.timeBetweenNotes(bpm, noteSize)
 		playedAt: null
 	}
-
-	d data...
 
 	startTime = null # Determined from the first keydown event
 	instrument.on 'keydown.notes', (e) ->
@@ -87,9 +98,7 @@ start = (notes, bpm, noteSize) ->
 				playedAt: time
 			}
 
-
 		d note
-
 		dispatch.update(data)
 
 	findCorrespondingIndex = (key, time) ->

@@ -172,19 +172,23 @@
       up = down = 0;
       return d3.select(document).on('keydown.internal', function() {
         var _ref1;
-        return dispatch.keydown({
-          key: (_ref1 = keys[down++]) != null ? _ref1 : 72,
-          velocity: 50,
-          time: performance.now(),
-          event: null
-        });
+        if (d3.event.keyCode === 32) {
+          return dispatch.keydown({
+            key: (_ref1 = keys[down++]) != null ? _ref1 : 72,
+            velocity: 50,
+            time: performance.now(),
+            event: null
+          });
+        }
       }).on('keyup.internal', function() {
         var _ref1;
-        return dispatch.keyup({
-          key: (_ref1 = keys[up++]) != null ? _ref1 : 72,
-          time: performance.now(),
-          event: null
-        });
+        if (d3.event.keyCode === 32) {
+          return dispatch.keyup({
+            key: (_ref1 = keys[up++]) != null ? _ref1 : 72,
+            time: performance.now(),
+            event: null
+          });
+        }
       });
     };
     dispatch.stopEmulatingKeys = function() {
@@ -264,7 +268,7 @@
   instrument = initInstrument();
 
   _.defer(function() {
-    var bpm, exercise, exerciseVis, height, metronomeVis, noteSize, pad, vis, width, _ref1;
+    var arm, bpm, ex, exercise, exerciseVis, height, metronomeVis, noteSize, pad, vis, width, _ref1;
     d('Starting');
     exercise = _.flatten([major(60), major(72), 72 + 12, major(72).reverse(), major(60).reverse()]).map(function(key, index) {
       return {
@@ -277,22 +281,36 @@
     noteSize = 1;
     vis = d3.select('#exercise');
     _ref1 = vis.node().getBoundingClientRect(), width = _ref1.width, height = _ref1.height;
-    height = 300;
+    height = 200;
     vis.attr({
       width: width,
-      height: height
+      height: height + 150
     });
     pad = 40;
     metronomeVis = M.metronome().width(width).pad(pad).beats(exercise.length).bpm(bpm).vis(vis);
     metronomeVis();
-    exerciseVis = M.exercise().width(width).height(height).pad(pad).bpm(bpm).noteSize(noteSize).vis(vis);
-    return start(exercise, bpm, noteSize).on('start', function(notes) {
-      exerciseVis.startTimeline(notes[notes.length - 1].expectedAt);
-      return Metronome.start(120);
-    }).on('update', function(notes) {
-      return exerciseVis.notes(notes);
-    }).on('complete', function(notes) {
-      return d('Complete.');
+    exerciseVis = M.exercise().width(width).height(height).pad(pad).bpm(bpm).noteSize(noteSize).vis(vis.append('g').attr('transform', 'translate(0, 100)'));
+    ex = null;
+    arm = function() {
+      return ex = start(exercise, bpm, noteSize).on('start', function(notes) {
+        exerciseVis.startTimeline(notes[notes.length - 1].expectedAt);
+        return Metronome.start(bpm);
+      }).on('update', function(notes) {
+        return exerciseVis.notes(notes);
+      }).on('complete', function(notes) {
+        Metronome.stop();
+        return d('Complete.');
+      });
+    };
+    arm();
+    key('a', function() {
+      ex.abort();
+      return exerciseVis.stopTimeline();
+    });
+    return key('r', function() {
+      ex.abort();
+      exerciseVis.stopTimeline();
+      return arm();
     });
   });
 
@@ -306,7 +324,6 @@
         playedAt: null
       };
     });
-    d.apply(null, data);
     startTime = null;
     instrument.on('keydown.notes', function(e) {
       var index, note, time;
