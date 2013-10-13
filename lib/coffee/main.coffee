@@ -279,7 +279,9 @@ M = {
 			)
 
 			enter.append('text').attr(
+				class: 'name'
 				y: 30
+				x: -1 # Compensate for letters not starting immediately at the onset of the character
 				fill: '#999'
 			).text((d) -> d.name)
 

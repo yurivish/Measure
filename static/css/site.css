@@ -22,7 +22,6 @@ h1,h2{font-size:36px;line-height:36px}
 #page #control-bar .main .play circle:hover + polygon{fill:#fff}
 #page #control-bar .main .play circle:active{stroke:#999;fill:#000}
 #page #control-bar .main .play polygon{fill:#eee;pointer-events:none}
-#page #exercise .metronome text{text-anchor:middle;font-size:12px}
 #page #exercise .axis .domain{display:none}
 #page #exercise .axis text{font:10px sans-serif}
 #page #exercise .axis line,#page #exercise .axis path{fill:none;stroke:#555;shape-rendering:crispEdges}

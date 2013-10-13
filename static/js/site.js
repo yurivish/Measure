@@ -498,7 +498,9 @@
           x: 0
         });
         enter.append('text').attr({
+          "class": 'name',
           y: 30,
+          x: -1,
           fill: '#999'
         }).text(function(d) {
           return d.name;
