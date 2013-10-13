@@ -8,6 +8,7 @@ _.defer ->
 		Theory.major(60)
 		Theory.major(72)
 		72 + 12 # Top C
+		72 + 12
 		Theory.major(72).reverse()
 		Theory.major(60).reverse()
 	]).map (key, index, arr) -> {
@@ -82,7 +83,7 @@ start = (notes, bpm, noteDuration) ->
 		degree: note.degree
 		expectedAt: note.time * Theory.timeBetweenNotes(bpm, noteDuration)
 		playedAt: null
-		name: Theory.noteNameForKey note.key 
+		name: Theory.noteNameForKey note.key, true
 	}
 
 	startTime = null # Determined from the first keydown event
@@ -101,11 +102,7 @@ start = (notes, bpm, noteDuration) ->
 			data.push {
 				key: e.key
 				expectedAt: null
-				playedAt: time			# # enter.append('text').attr(
-			# # 	y: 30
-			# # 	fill: '#999'
-			# # ).text((d) -> d.text)
-
+				playedAt: time
 			}
 
 		d note
@@ -245,7 +242,7 @@ M = {
 			notes = vis.select('.notes')
 			if notes.empty()
 				notes = vis.append('g').attr('class', 'notes')
-				notes.append('path').attr('class', 'contour')
+				notes.append('g').attr('class', 'contours')
 				timeline = vis.append('line').attr(
 					class: 'timeline'
 					x1: 0, y1: -9999
@@ -255,6 +252,10 @@ M = {
 
 		render = ->
 			data = opts.notes
+
+			data[0].instruction = 'Ascend two octaves'
+			data[15].instruction = 'Descend two octaves'
+
 			# TODO: Do we want to visualize real time, or with bpm normalized out?
 
 			x = d3.scale.linear()
@@ -273,15 +274,27 @@ M = {
 			enter.append('rect').attr(
 				class: 'indicator'
 				fill: '#fff'
+				stroke: '#fff' # So that we're completely aligned with the metronome marking
 				x: 0
 			)
 
+			textY = 30
+
 			enter.append('text').attr(
 				class: 'name'
-				y: 30
+				y: textY
 				x: -1 # Compensate for letters not starting immediately at the onset of the character
-				fill: '#999'
-			).text((d) -> d.name)
+				fill: (d) -> if d.instruction then '#fff' else '#999'
+			).text((d) -> if d.name[0] == 'C' then d.name else '')
+
+
+			enter.append('text').attr(
+				class: 'instruction'
+				y: textY + 20
+				x: -1 # Compensate for letters not starting immediately at the onset of the character
+				fill: '#fff'
+			).text((d) -> d.instruction ? '')
+
 
 			colorScale = d3.scale.linear()
 				.domain([-1000, 0, 1000])
@@ -290,7 +303,7 @@ M = {
 				.clamp(true)
 
 			noteHeight = 10
-			noteWidth = 2
+			noteWidth = 3
 
 			errorScale = (error) -> x(error) - x(0)
 
@@ -302,21 +315,23 @@ M = {
 						min 0, errorScale(d.error)
 					else
 						0
-				fill: (d) -> if d.error? then colorScale(d.error) else '#fff'
+				fill: (d) ->   if d.error? then colorScale(d.error) else '#fff'
+				stroke: (d) -> if d.error? then colorScale(d.error) else '#fff'
 			)
 
-			# Pitch contour
-			# BUG: This should not visualize dropped notes
-			yContour = d3.scale.linear()
-				.domain(d3.extent(data, (d) -> d.degree))
-				.range([25, 0]) # Position higher notes higher up
+			# Pitch contours	
+			# Idea: Pitch contour only places where change occurs, e.g. the first upwards note, and the first downwards note
+			# update = notes.select('.contours').selectAll('.contour').data(data[...data.length - 1])
+			# contourY = textY - 5 # - half text height
 
-			contour = d3.svg.line()
-				.x((d) -> x(d.expectedAt))
-				.y((d) -> yContour(d.degree))
-
-			notes.select('.contour').attr('d', contour(data))
-
+			# enter = update.enter().append('line').attr(
+			# 	class: 'contour'
+			# 	x1: (d, i) -> x(d.expectedAt) + 15
+			# 	x2: (d, i) -> x(data[i+1].expectedAt) - 15
+			# 	y1: (d, i) -> y(d.degree) + contourY - if data[i+1].degree - d.degree < 0 then 3 else -3
+			# 	y2: (d, i) -> y(d.degree) + contourY - if data[i+1].degree - d.degree > 0 then 3 else -3
+			# 	stroke: '#666'
+			# )
 
 		render.startTimeline = (duration) ->
 			timeline = opts.vis.select('.timeline')

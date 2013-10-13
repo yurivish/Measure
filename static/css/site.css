@@ -19,13 +19,12 @@ h1,h2{font-size:36px;line-height:36px}
 #page #control-bar .main .play{width:75px;height:75px;margin:0 40px;margin-top:-10px;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;}
 #page #control-bar .main .play circle{fill:#1a1a1a;stroke-width:2;stroke:#808080;cursor:pointer;}
 #page #control-bar .main .play circle:hover{stroke:#b3b3b3;}
-#page #control-bar .main .play circle:hover + polygon{fill:#fff}
+#page #control-bar .main .play circle:hover + polygon,#page #control-bar .main .play circle:hover + rect{fill:#fff}
 #page #control-bar .main .play circle:active{stroke:#999;fill:#000}
-#page #control-bar .main .play polygon{fill:#eee;pointer-events:none}
-#page #exercise text.name{font-size:12px}
-#page #exercise .contour{stroke:#fff}
+#page #control-bar .main .play polygon,#page #control-bar .main .play rect{fill:#eee;pointer-events:none}
+#page #exercise text.name,#page #exercise text.instruction{font-size:12px}
 #page #exercise .axis text{font:10px sans-serif;display:none}
 #page #exercise .axis .domain{display:none}
 #page #exercise .axis line,#page #exercise .axis path{fill:none;stroke:#555;shape-rendering:crispEdges}
-#page #exercise .axis.major line,#page #exercise .axis.major path{stroke:#555}
+#page #exercise .axis.major line,#page #exercise .axis.major path{stroke:#555;stroke-width:1}
 

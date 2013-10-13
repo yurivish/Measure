@@ -102,8 +102,8 @@
         return start + offset;
       });
     };
-    Theory.noteNameForKey = function(key) {
-      return notes[key % 12];
+    Theory.noteNameForKey = function(key, number) {
+      return notes[key % 12] + (number ? '' + Math.floor(key / 12) - 1 : '');
     };
     return Theory.timeBetweenNotes = function(bpm, noteSize) {
       return noteSize * 1000 / (bpm / 60);
@@ -272,7 +272,7 @@
   _.defer(function() {
     var arm, bpm, ex, exercise, exerciseVis, height, metronomeVis, noteDuration, pad, stop, vis, width, _ref1;
     d('Starting');
-    exercise = _.flatten([Theory.major(60), Theory.major(72), 72 + 12, Theory.major(72).reverse(), Theory.major(60).reverse()]).map(function(key, index, arr) {
+    exercise = _.flatten([Theory.major(60), Theory.major(72), 72 + 12, 72 + 12, Theory.major(72).reverse(), Theory.major(60).reverse()]).map(function(key, index, arr) {
       return {
         key: key,
         time: index,
@@ -329,7 +329,7 @@
         degree: note.degree,
         expectedAt: note.time * Theory.timeBetweenNotes(bpm, noteDuration),
         playedAt: null,
-        name: Theory.noteNameForKey(note.key)
+        name: Theory.noteNameForKey(note.key, true)
       };
     });
     startTime = null;
@@ -460,7 +460,7 @@
         notes = vis.select('.notes');
         if (notes.empty()) {
           notes = vis.append('g').attr('class', 'notes');
-          notes.append('path').attr('class', 'contour');
+          notes.append('g').attr('class', 'contours');
           return timeline = vis.append('line').attr({
             "class": 'timeline',
             x1: 0,
@@ -472,8 +472,10 @@
         }
       };
       render = function() {
-        var colorScale, contour, data, enter, errorScale, noteHeight, noteWidth, notes, update, x, y, yContour;
+        var colorScale, data, enter, errorScale, noteHeight, noteWidth, notes, textY, update, x, y;
         data = opts.notes;
+        data[0].instruction = 'Ascend two octaves';
+        data[15].instruction = 'Descend two octaves';
         x = d3.scale.linear().domain(d3.extent(data, function(d) {
           return d.expectedAt;
         })).range([opts.pad, opts.width - opts.pad]);
@@ -492,23 +494,44 @@
         enter.append('rect').attr({
           "class": 'indicator',
           fill: '#fff',
+          stroke: '#fff',
           x: 0
         });
+        textY = 30;
         enter.append('text').attr({
           "class": 'name',
-          y: 30,
+          y: textY,
           x: -1,
-          fill: '#999'
+          fill: function(d) {
+            if (d.instruction) {
+              return '#fff';
+            } else {
+              return '#999';
+            }
+          }
         }).text(function(d) {
-          return d.name;
+          if (d.name[0] === 'C') {
+            return d.name;
+          } else {
+            return '';
+          }
+        });
+        enter.append('text').attr({
+          "class": 'instruction',
+          y: textY + 20,
+          x: -1,
+          fill: '#fff'
+        }).text(function(d) {
+          var _ref1;
+          return (_ref1 = d.instruction) != null ? _ref1 : '';
         });
         colorScale = d3.scale.linear().domain([-1000, 0, 1000]).range(['#ff0000', '#fff', '#009eff']).interpolate(d3.interpolateLab).clamp(true);
         noteHeight = 10;
-        noteWidth = 2;
+        noteWidth = 3;
         errorScale = function(error) {
           return x(error) - x(0);
         };
-        update.select('.indicator').transition().ease('cubic-out').duration(0).attr({
+        return update.select('.indicator').transition().ease('cubic-out').duration(0).attr({
           width: function(d) {
             if (d.error != null) {
               return abs(errorScale(d.error));
@@ -530,17 +553,15 @@
             } else {
               return '#fff';
             }
+          },
+          stroke: function(d) {
+            if (d.error != null) {
+              return colorScale(d.error);
+            } else {
+              return '#fff';
+            }
           }
         });
-        yContour = d3.scale.linear().domain(d3.extent(data, function(d) {
-          return d.degree;
-        })).range([25, 0]);
-        contour = d3.svg.line().x(function(d) {
-          return x(d.expectedAt);
-        }).y(function(d) {
-          return yContour(d.degree);
-        });
-        return notes.select('.contour').attr('d', contour(data));
       };
       render.startTimeline = function(duration) {
         var timeline;

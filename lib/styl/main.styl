@@ -112,17 +112,16 @@ h1, h2
 					stroke-width 2
 					stroke #808080
 					cursor pointer
-
 					&:hover
 						stroke #b3b3b3
-						+ polygon
+						+ polygon, + rect
 							fill #fff
 
 					&:active
 						stroke #999
 						fill #000
 
-				polygon // triangle
+				polygon, rect // triangle
 					fill #eee
 					pointer-events none
 
@@ -143,11 +142,11 @@ h1, h2
 		// 	text-anchor middle
 		// 	font-size 12px
 
-		text.name
+		text.name, text.instruction
 			font-size 12px
 
-		.contour
-			stroke #fff
+		// .contour
+		// 	stroke #fff
 
 		.axis
 			text
@@ -166,5 +165,6 @@ h1, h2
 			&.major
 				line, path
 					stroke #555
+					stroke-width 1
 		
 
