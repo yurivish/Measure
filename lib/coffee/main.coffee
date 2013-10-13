@@ -10,13 +10,14 @@ _.defer ->
 		72 + 12 # Top C
 		major(72).reverse()
 		major(60).reverse()
-	]).map (key, index) -> {
+	]).map (key, index, arr) -> {
 		key
 		time: index # Time starts at zero and is incremented every beat.
+		degree: if index < arr.length/2 then index else (arr.length - index) - 1
 		hand: 'left'
 	}
 
-	bpm = 120
+	bpm = 1200
 	noteSize = 1 # Whole notes
 
 	vis = d3.select('#exercise')
@@ -45,6 +46,11 @@ _.defer ->
 		.vis(vis.append('g').attr('transform', 'translate(0, 100)'))
 
 	ex = null
+	stop = ->
+		Metronome.stop() # BUG: seems to stop before the last note is played, sometimes?
+		exerciseVis.stopTimeline()
+		ex.abort()
+
 	arm = ->
 		ex = start(exercise, bpm, noteSize)
 			.on('start', (notes) ->
@@ -52,18 +58,16 @@ _.defer ->
 				Metronome.start(bpm)
 			).on('update', (notes) -> exerciseVis.notes(notes))
 			.on('complete', (notes) ->
-				Metronome.stop() # BUG: seems to stop before the last note is played
+				stop()
 				d 'Complete.'
 			)
 	arm()
 
 	key 'a', ->
-		ex.abort()
-		exerciseVis.stopTimeline()
+		stop()
 
 	key 'r', ->
-		ex.abort()
-		exerciseVis.stopTimeline()
+		stop()
 		arm()
 
 	# # NOTE: We'll want to record incomplete sessions and aborts, too.
@@ -75,6 +79,7 @@ start = (notes, bpm, noteSize) ->
 	# Session data for this instantiation of the notes
 	data = notes.map (note) -> {
 		key: note.key
+		degree: note.degree
 		expectedAt: note.time * Theory.timeBetweenNotes(bpm, noteSize)
 		playedAt: null
 	}
@@ -119,6 +124,7 @@ start = (notes, bpm, noteSize) ->
 	instrument.emulateKeysWithKeyboard notes.map ({key}) -> key
 
 	# End the exercise once the amount of time that it takes has elapsed
+	# BUG: Ends early...
 	duration = (notes[notes.length - 1].time) * Theory.timeBetweenNotes(bpm, noteSize)
 	endTimeout = setTimeout ->
 		dispatch.complete(data)
@@ -144,22 +150,49 @@ M = {
 		}
 
 		createElements = ->
-			nome = opts.vis.select('.metronome')
-			if nome.empty()
+			if opts.vis.select('.metronome').empty()
 				nome = opts.vis.append('g').attr(class: 'metronome')
+				nome.append('g').attr(class: 'axis major')
+				nome.append('g').attr(class: 'axis minor')
 
 		render = ->
-			beats = for num in [0...opts.beats]
+			beats = [ ]
+			majors = [ ]
+			minors = [ ]
+			for num in [0...opts.beats]
 				# NOTE: Notes and beats are not one-to-one.
-				{ num, text: Theory.notes[num % 12] } 
+				# TODO: Should have real text or perhaps just the first and last have timing info
+				beats.push { num, text: Theory.notes[num % 12] } 
+				majors.push num
+				unless num == opts.beats - 1
+					minors.push num + 0.25
+					minors.push num + 0.5
+					minors.push num + 0.75
 
-			beatRadius = (d, i) -> 3 # if i % 4 then 2 else 6
+			beatRadius = (d, i) ->  if i % 4 then 2 else 6
 
 			x = d3.scale.linear()
 				.domain([0, opts.beats - 1])
 				.range([opts.pad, opts.width - opts.pad])
 
-			update = opts.vis.select('.metronome').selectAll('.beat').data(beats)
+			major = d3.svg.axis()
+				.scale(x)
+				.orient('bottom')
+				.tickValues(majors)
+				.tickSize(14)
+
+			minor = d3.svg.axis()
+				.scale(x)
+				.orient('bottom')
+				.tickValues(minors)
+				.outerTickSize(0)
+				.innerTickSize(7)
+
+			nome = opts.vis.select('.metronome')
+			nome.select('.axis.major').call(major)
+			nome.select('.axis.minor').call(minor)
+
+			update = nome.selectAll('.beat').data(beats)
 			enter = update.enter().append('g').attr(
 				class: 'beat'
 				transform: (d) -> "translate(#{x(d.num)}, 25)" # TODO: - beatRadius(d, i)
@@ -196,7 +229,7 @@ M = {
 			pad: 0
 			bpm: 120
 			noteSize: 1
-			noteRadius: 3
+			noteRadius: 5
 			notes: [ ]
 			vis: null
 		}
@@ -224,18 +257,20 @@ M = {
 				.range([opts.pad, opts.width - opts.pad])
 
 			y = d3.scale.linear()
-				.domain(d3.extent(data, (d) -> d.key))
+				.domain(d3.extent(data, (d) -> d.degree))
 				.range([opts.height, 0]) # Position higher notes higher up
 
 			update = opts.vis.select('.notes').selectAll('.note').data(data)
 			enter = update.enter().append('g').attr(
 				class: 'note'
-				transform: (d) -> "translate(#{x(d.expectedAt ? d.playedAt)}, #{y(d.key)})"
+				transform: (d) -> "translate(#{x(d.expectedAt ? d.playedAt)}, #{y(d.degree)})"
 			)
 
-			enter.append('circle').attr(
+			enter.append('rect').attr(
 				class: 'indicator'
 				r: opts.noteRadius
+				rx: 2
+				ry: 2
 				fill: '#fff'
 			)
 
@@ -247,8 +282,10 @@ M = {
 
 			errorScale = (error) -> max(abs(x(error) - x(0)), 3)
 
-			update.select('circle').transition().ease('cubic-out').duration(200).attr(
+			update.select('.indicator').transition().ease('cubic-out').duration(200).attr(
 				r: (d) -> if d.error? then errorScale(d.error) else opts.noteRadius
+				width: (d) -> if d.error? then errorScale(d.error) * 2 else opts.noteRadius * 2
+				height: (d) -> opts.noteRadius * 2
 				fill: (d) -> if d.error? then colorScale(d.error) else '#fff'
 			)
 

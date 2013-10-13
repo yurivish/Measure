@@ -23,6 +23,8 @@ h1,h2{font-size:36px;line-height:36px}
 #page #control-bar .main .play circle:active{stroke:#999;fill:#000}
 #page #control-bar .main .play polygon{fill:#eee;pointer-events:none}
 #page #exercise .metronome text{text-anchor:middle;font-size:12px}
-#page #notes text{font-family:Helvetica Neue,Helvetica;font-size:36px}
-#page #notes .timeline{shape-rendering:crispEdges}
+#page #exercise .axis .domain{display:none}
+#page #exercise .axis text{font:10px sans-serif}
+#page #exercise .axis line,#page #exercise .axis path{fill:none;stroke:#555;shape-rendering:crispEdges}
+#page #exercise .axis.major line,#page #exercise .axis.major path{stroke:#555}
 

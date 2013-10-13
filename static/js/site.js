@@ -268,16 +268,17 @@
   instrument = initInstrument();
 
   _.defer(function() {
-    var arm, bpm, ex, exercise, exerciseVis, height, metronomeVis, noteSize, pad, vis, width, _ref1;
+    var arm, bpm, ex, exercise, exerciseVis, height, metronomeVis, noteSize, pad, stop, vis, width, _ref1;
     d('Starting');
-    exercise = _.flatten([major(60), major(72), 72 + 12, major(72).reverse(), major(60).reverse()]).map(function(key, index) {
+    exercise = _.flatten([major(60), major(72), 72 + 12, major(72).reverse(), major(60).reverse()]).map(function(key, index, arr) {
       return {
         key: key,
         time: index,
+        degree: index < arr.length / 2 ? index : (arr.length - index) - 1,
         hand: 'left'
       };
     });
-    bpm = 120;
+    bpm = 1200;
     noteSize = 1;
     vis = d3.select('#exercise');
     _ref1 = vis.node().getBoundingClientRect(), width = _ref1.width, height = _ref1.height;
@@ -291,6 +292,11 @@
     metronomeVis();
     exerciseVis = M.exercise().width(width).height(height).pad(pad).bpm(bpm).noteSize(noteSize).vis(vis.append('g').attr('transform', 'translate(0, 100)'));
     ex = null;
+    stop = function() {
+      Metronome.stop();
+      exerciseVis.stopTimeline();
+      return ex.abort();
+    };
     arm = function() {
       return ex = start(exercise, bpm, noteSize).on('start', function(notes) {
         exerciseVis.startTimeline(notes[notes.length - 1].expectedAt);
@@ -298,18 +304,16 @@
       }).on('update', function(notes) {
         return exerciseVis.notes(notes);
       }).on('complete', function(notes) {
-        Metronome.stop();
+        stop();
         return d('Complete.');
       });
     };
     arm();
     key('a', function() {
-      ex.abort();
-      return exerciseVis.stopTimeline();
+      return stop();
     });
     return key('r', function() {
-      ex.abort();
-      exerciseVis.stopTimeline();
+      stop();
       return arm();
     });
   });
@@ -320,6 +324,7 @@
     data = notes.map(function(note) {
       return {
         key: note.key,
+        degree: note.degree,
         expectedAt: note.time * Theory.timeBetweenNotes(bpm, noteSize),
         playedAt: null
       };
@@ -390,31 +395,49 @@
       };
       createElements = function() {
         var nome;
-        nome = opts.vis.select('.metronome');
-        if (nome.empty()) {
-          return nome = opts.vis.append('g').attr({
+        if (opts.vis.select('.metronome').empty()) {
+          nome = opts.vis.append('g').attr({
             "class": 'metronome'
+          });
+          nome.append('g').attr({
+            "class": 'axis major'
+          });
+          return nome.append('g').attr({
+            "class": 'axis minor'
           });
         }
       };
       render = function() {
-        var beatRadius, beats, enter, num, update, x;
-        beats = (function() {
-          var _i, _ref1, _results;
-          _results = [];
-          for (num = _i = 0, _ref1 = opts.beats; 0 <= _ref1 ? _i < _ref1 : _i > _ref1; num = 0 <= _ref1 ? ++_i : --_i) {
-            _results.push({
-              num: num,
-              text: Theory.notes[num % 12]
-            });
+        var beatRadius, beats, enter, majors, minor, minors, nome, num, update, x, _i, _ref1;
+        beats = [];
+        majors = [];
+        minors = [];
+        for (num = _i = 0, _ref1 = opts.beats; 0 <= _ref1 ? _i < _ref1 : _i > _ref1; num = 0 <= _ref1 ? ++_i : --_i) {
+          beats.push({
+            num: num,
+            text: Theory.notes[num % 12]
+          });
+          majors.push(num);
+          if (num !== opts.beats - 1) {
+            minors.push(num + 0.25);
+            minors.push(num + 0.5);
+            minors.push(num + 0.75);
           }
-          return _results;
-        })();
+        }
         beatRadius = function(d, i) {
-          return 3;
+          if (i % 4) {
+            return 2;
+          } else {
+            return 6;
+          }
         };
         x = d3.scale.linear().domain([0, opts.beats - 1]).range([opts.pad, opts.width - opts.pad]);
-        update = opts.vis.select('.metronome').selectAll('.beat').data(beats);
+        major = d3.svg.axis().scale(x).orient('bottom').tickValues(majors).tickSize(14);
+        minor = d3.svg.axis().scale(x).orient('bottom').tickValues(minors).outerTickSize(0).innerTickSize(7);
+        nome = opts.vis.select('.metronome');
+        nome.select('.axis.major').call(major);
+        nome.select('.axis.minor').call(minor);
+        update = nome.selectAll('.beat').data(beats);
         enter = update.enter().append('g').attr({
           "class": 'beat',
           transform: function(d) {
@@ -443,7 +466,7 @@
         pad: 0,
         bpm: 120,
         noteSize: 1,
-        noteRadius: 3,
+        noteRadius: 5,
         notes: [],
         vis: null
       };
@@ -473,32 +496,44 @@
           return d.expectedAt;
         })).range([opts.pad, opts.width - opts.pad]);
         y = d3.scale.linear().domain(d3.extent(data, function(d) {
-          return d.key;
+          return d.degree;
         })).range([opts.height, 0]);
         update = opts.vis.select('.notes').selectAll('.note').data(data);
         enter = update.enter().append('g').attr({
           "class": 'note',
           transform: function(d) {
             var _ref1;
-            return "translate(" + (x((_ref1 = d.expectedAt) != null ? _ref1 : d.playedAt)) + ", " + (y(d.key)) + ")";
+            return "translate(" + (x((_ref1 = d.expectedAt) != null ? _ref1 : d.playedAt)) + ", " + (y(d.degree)) + ")";
           }
         });
-        enter.append('circle').attr({
+        enter.append('rect').attr({
           "class": 'indicator',
           r: opts.noteRadius,
+          rx: 2,
+          ry: 2,
           fill: '#fff'
         });
         colorScale = d3.scale.linear().domain([-1000, 0, 1000]).range(['#ff0000', '#fff', '#009eff']).interpolate(d3.interpolateLab).clamp(true);
         errorScale = function(error) {
           return max(abs(x(error) - x(0)), 3);
         };
-        return update.select('circle').transition().ease('cubic-out').duration(200).attr({
+        return update.select('.indicator').transition().ease('cubic-out').duration(200).attr({
           r: function(d) {
             if (d.error != null) {
               return errorScale(d.error);
             } else {
               return opts.noteRadius;
             }
+          },
+          width: function(d) {
+            if (d.error != null) {
+              return errorScale(d.error) * 2;
+            } else {
+              return opts.noteRadius * 2;
+            }
+          },
+          height: function(d) {
+            return opts.noteRadius * 2;
           },
           fill: function(d) {
             if (d.error != null) {
