@@ -270,7 +270,7 @@
   instrument = initInstrument();
 
   _.defer(function() {
-    var arm, bpm, ex, exercise, exerciseVis, height, metronomeVis, noteSize, pad, stop, vis, width, _ref1;
+    var arm, bpm, ex, exercise, exerciseVis, height, metronomeVis, noteDuration, pad, stop, vis, width, _ref1;
     d('Starting');
     exercise = _.flatten([Theory.major(60), Theory.major(72), 72 + 12, Theory.major(72).reverse(), Theory.major(60).reverse()]).map(function(key, index, arr) {
       return {
@@ -281,7 +281,7 @@
       };
     });
     bpm = 120;
-    noteSize = 1;
+    noteDuration = 1;
     vis = d3.select('#exercise');
     _ref1 = vis.node().getBoundingClientRect(), width = _ref1.width, height = _ref1.height;
     height = 200;
@@ -292,7 +292,7 @@
     pad = 40;
     metronomeVis = M.metronome().width(width).pad(pad).beats(exercise.length).bpm(bpm).vis(vis);
     metronomeVis();
-    exerciseVis = M.exercise().width(width).height(height).pad(pad).bpm(bpm).noteSize(noteSize).vis(vis.append('g').attr('transform', 'translate(0, 100)'));
+    exerciseVis = M.exercise().width(width).height(height).pad(pad).bpm(bpm).noteDuration(noteDuration).vis(vis.append('g').attr('transform', 'translate(0, 100)'));
     ex = null;
     stop = function() {
       Metronome.stop();
@@ -300,7 +300,7 @@
       return ex.abort();
     };
     arm = function() {
-      return ex = start(exercise, bpm, noteSize).on('start', function(notes) {
+      return ex = start(exercise, bpm, noteDuration).on('start', function(notes) {
         exerciseVis.startTimeline(notes[notes.length - 1].expectedAt);
         return Metronome.start(bpm);
       }).on('update', function(notes) {
@@ -320,14 +320,14 @@
     });
   });
 
-  start = function(notes, bpm, noteSize) {
+  start = function(notes, bpm, noteDuration) {
     var data, dispatch, duration, endTimeout, findCorrespondingIndex, startTime;
     dispatch = d3.dispatch('start', 'update', 'complete');
     data = notes.map(function(note) {
       return {
         key: note.key,
         degree: note.degree,
-        expectedAt: note.time * Theory.timeBetweenNotes(bpm, noteSize),
+        expectedAt: note.time * Theory.timeBetweenNotes(bpm, noteDuration),
         playedAt: null,
         name: Theory.noteNameForKey(note.key)
       };
@@ -371,10 +371,10 @@
       key = _arg.key;
       return key;
     }));
-    duration = notes[notes.length - 1].time * Theory.timeBetweenNotes(bpm, noteSize);
+    duration = notes[notes.length - 1].time * Theory.timeBetweenNotes(bpm, noteDuration);
     endTimeout = setTimeout(function() {
       return dispatch.complete(data);
-    }, duration);
+    }, duration * 2);
     dispatch.abort = function() {
       instrument.stopEmulatingKeys();
       instrument.on('keydown.notes', null);
@@ -449,7 +449,7 @@
         height: 300,
         pad: 0,
         bpm: 120,
-        noteSize: 1,
+        noteDuration: 1,
         notes: [],
         vis: null
       };
@@ -459,9 +459,8 @@
         vis = opts.vis;
         notes = vis.select('.notes');
         if (notes.empty()) {
-          notes = vis.append('g').attr({
-            "class": 'notes'
-          });
+          notes = vis.append('g').attr('class', 'notes');
+          notes.append('path').attr('class', 'contour');
           return timeline = vis.append('line').attr({
             "class": 'timeline',
             x1: 0,
@@ -473,18 +472,16 @@
         }
       };
       render = function() {
-        var colorScale, data, enter, errorScale, noteHeight, noteWidth, update, x, y;
+        var colorScale, contour, data, enter, errorScale, noteHeight, noteWidth, notes, update, x, y, yContour;
         data = opts.notes;
         x = d3.scale.linear().domain(d3.extent(data, function(d) {
           return d.expectedAt;
         })).range([opts.pad, opts.width - opts.pad]);
-        y = d3.scale.linear().domain(d3.extent(data, function(d) {
-          return d.degree;
-        })).range([opts.height, 0]);
         y = function() {
           return -75;
         };
-        update = opts.vis.select('.notes').selectAll('.note').data(data);
+        notes = opts.vis.select('.notes');
+        update = notes.selectAll('.note').data(data);
         enter = update.enter().append('g').attr({
           "class": 'note',
           transform: function(d) {
@@ -511,7 +508,7 @@
         errorScale = function(error) {
           return x(error) - x(0);
         };
-        return update.select('.indicator').transition().ease('cubic-out').duration(0).attr({
+        update.select('.indicator').transition().ease('cubic-out').duration(0).attr({
           width: function(d) {
             if (d.error != null) {
               return abs(errorScale(d.error));
@@ -535,6 +532,15 @@
             }
           }
         });
+        yContour = d3.scale.linear().domain(d3.extent(data, function(d) {
+          return d.degree;
+        })).range([25, 0]);
+        contour = d3.svg.line().x(function(d) {
+          return x(d.expectedAt);
+        }).y(function(d) {
+          return yContour(d.degree);
+        });
+        return notes.select('.contour').attr('d', contour(data));
       };
       render.startTimeline = function(duration) {
         var timeline;

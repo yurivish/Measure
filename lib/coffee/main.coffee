@@ -18,7 +18,7 @@ _.defer ->
 	}
 
 	bpm = 120
-	noteSize = 1 # Whole notes
+	noteDuration = 1 # Whole notes
 
 	vis = d3.select('#exercise')
 
@@ -42,7 +42,7 @@ _.defer ->
 		.height(height)
 		.pad(pad)
 		.bpm(bpm)
-		.noteSize(noteSize)
+		.noteDuration(noteDuration)
 		.vis(vis.append('g').attr('transform', 'translate(0, 100)'))
 
 	ex = null
@@ -52,7 +52,7 @@ _.defer ->
 		ex.abort()
 
 	arm = ->
-		ex = start(exercise, bpm, noteSize)
+		ex = start(exercise, bpm, noteDuration)
 			.on('start', (notes) ->
 				exerciseVis.startTimeline(notes[notes.length - 1].expectedAt)
 				Metronome.start(bpm)
@@ -73,14 +73,14 @@ _.defer ->
 	# # NOTE: We'll want to record incomplete sessions and aborts, too.
 	# And visits to the site.
 
-start = (notes, bpm, noteSize) ->
+start = (notes, bpm, noteDuration) ->
 	dispatch = d3.dispatch 'start', 'update', 'complete'
 
 	# Session data for this instantiation of the notes
 	data = notes.map (note) -> {
 		key: note.key
 		degree: note.degree
-		expectedAt: note.time * Theory.timeBetweenNotes(bpm, noteSize)
+		expectedAt: note.time * Theory.timeBetweenNotes(bpm, noteDuration)
 		playedAt: null
 		name: Theory.noteNameForKey note.key 
 	}
@@ -130,10 +130,10 @@ start = (notes, bpm, noteSize) ->
 
 	# End the exercise once the amount of time that it takes has elapsed
 	# BUG: Ends early...
-	duration = (notes[notes.length - 1].time) * Theory.timeBetweenNotes(bpm, noteSize)
+	duration = (notes[notes.length - 1].time) * Theory.timeBetweenNotes(bpm, noteDuration)
 	endTimeout = setTimeout ->
 		dispatch.complete(data)
-	, duration
+	, duration * 2 # BUG: Double to compensate for wrong timing
 
 	# Expose an abort method, which ends the exercise early.
 	dispatch.abort = ->
@@ -233,7 +233,7 @@ M = {
 			height: 300
 			pad: 0
 			bpm: 120
-			noteSize: 1
+			noteDuration: 1
 			notes: [ ]
 			vis: null
 		}
@@ -244,7 +244,8 @@ M = {
 			vis = opts.vis
 			notes = vis.select('.notes')
 			if notes.empty()
-				notes = vis.append('g').attr(class: 'notes')
+				notes = vis.append('g').attr('class', 'notes')
+				notes.append('path').attr('class', 'contour')
 				timeline = vis.append('line').attr(
 					class: 'timeline'
 					x1: 0, y1: -9999
@@ -260,13 +261,10 @@ M = {
 				.domain(d3.extent(data, (d) -> d.expectedAt))
 				.range([opts.pad, opts.width - opts.pad])
 
-			y = d3.scale.linear()
-				.domain(d3.extent(data, (d) -> d.degree))
-				.range([opts.height, 0]) # Position higher notes higher up
-
 			y = -> -75
 
-			update = opts.vis.select('.notes').selectAll('.note').data(data)
+			notes = opts.vis.select('.notes')
+			update = notes.selectAll('.note').data(data)
 			enter = update.enter().append('g').attr(
 				class: 'note'
 				transform: (d) -> "translate(#{x(d.expectedAt ? d.playedAt)}, #{y(d.degree)})"
@@ -285,7 +283,6 @@ M = {
 				fill: '#999'
 			).text((d) -> d.name)
 
-
 			colorScale = d3.scale.linear()
 				.domain([-1000, 0, 1000])
 				.range(['#ff0000', '#fff', '#009eff'])
@@ -297,7 +294,6 @@ M = {
 
 			errorScale = (error) -> x(error) - x(0)
 
-
 			update.select('.indicator').transition().ease('cubic-out').duration(0).attr(
 				width: (d) -> if d.error? then abs errorScale(d.error) else noteWidth
 				height: noteHeight
@@ -308,6 +304,19 @@ M = {
 						0
 				fill: (d) -> if d.error? then colorScale(d.error) else '#fff'
 			)
+
+			# Pitch contour
+			# BUG: This should not visualize dropped notes
+			yContour = d3.scale.linear()
+				.domain(d3.extent(data, (d) -> d.degree))
+				.range([25, 0]) # Position higher notes higher up
+
+			contour = d3.svg.line()
+				.x((d) -> x(d.expectedAt))
+				.y((d) -> yContour(d.degree))
+
+			notes.select('.contour').attr('d', contour(data))
+
 
 		render.startTimeline = (duration) ->
 			timeline = opts.vis.select('.timeline')
