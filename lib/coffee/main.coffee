@@ -339,14 +339,19 @@ M = {
 			# If we can't have precision, is it better to *not* have a visual cue?
 			timeline
 				.attr(transform: "translate(#{opts.pad}, 0)", stroke: '#fff')
-				.transition()
-				.duration(duration)
-				.ease('linear')
-				.attr(transform: "translate(#{opts.width - opts.pad}, 0)")
+
+
+				# .duration(duration)
+			t = timeline
+			for i in [0...30]
+				t = t.transition().duration(500).delay(i * 500 - 25)
+					# .ease('linear')
+					.ease('cubic-out')
+					.attr(transform: "translate(#{opts.pad + (opts.width - opts.pad) / 30 * i}, 0)")
 
 		render.stopTimeline = ->
 			timeline = opts.vis.select('.timeline')
-			timeline.interrupt().attr(stroke: 'transparent')
+			timeline.interrupt().attr(stroke: 'transparent').transition()
 
 		_.accessors(render, opts).addAll()
 			.add('notes', render)

@@ -564,21 +564,27 @@
         });
       };
       render.startTimeline = function(duration) {
-        var timeline;
+        var i, t, timeline, _i, _results;
         timeline = opts.vis.select('.timeline');
-        return timeline.attr({
+        timeline.attr({
           transform: "translate(" + opts.pad + ", 0)",
           stroke: '#fff'
-        }).transition().duration(duration).ease('linear').attr({
-          transform: "translate(" + (opts.width - opts.pad) + ", 0)"
         });
+        t = timeline;
+        _results = [];
+        for (i = _i = 0; _i < 30; i = ++_i) {
+          _results.push(t = t.transition().duration(500).delay(i * 500 - 25).ease('cubic-out').attr({
+            transform: "translate(" + (opts.pad + (opts.width - opts.pad) / 30 * i) + ", 0)"
+          }));
+        }
+        return _results;
       };
       render.stopTimeline = function() {
         var timeline;
         timeline = opts.vis.select('.timeline');
         return timeline.interrupt().attr({
           stroke: 'transparent'
-        });
+        }).transition();
       };
       return _.accessors(render, opts).addAll().add('notes', render).add('vis', createElements).done();
     }
