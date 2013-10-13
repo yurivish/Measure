@@ -474,8 +474,8 @@
       render = function() {
         var colorScale, data, enter, errorScale, noteHeight, noteWidth, notes, textY, update, x, y;
         data = opts.notes;
-        data[0].instruction = 'Ascend two octaves';
-        data[15].instruction = 'Descend two octaves';
+        data[0].instruction = 'Ascend 2 octaves';
+        data[15].instruction = 'Descend 2 octaves';
         x = d3.scale.linear().domain(d3.extent(data, function(d) {
           return d.expectedAt;
         })).range([opts.pad, opts.width - opts.pad]);

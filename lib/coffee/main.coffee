@@ -253,8 +253,8 @@ M = {
 		render = ->
 			data = opts.notes
 
-			data[0].instruction = 'Ascend two octaves'
-			data[15].instruction = 'Descend two octaves'
+			data[0].instruction = 'Ascend 2 octaves'
+			data[15].instruction = 'Descend 2 octaves'
 
 			# TODO: Do we want to visualize real time, or with bpm normalized out?
 
