@@ -5,11 +5,11 @@ _.defer ->
 	d 'Starting'
 
 	exercise = _.flatten([
-		major(60)
-		major(72)
+		Theory.major(60)
+		Theory.major(72)
 		72 + 12 # Top C
-		major(72).reverse()
-		major(60).reverse()
+		Theory.major(72).reverse()
+		Theory.major(60).reverse()
 	]).map (key, index, arr) -> {
 		key
 		time: index # Time starts at zero and is incremented every beat.
@@ -17,7 +17,7 @@ _.defer ->
 		hand: 'left'
 	}
 
-	bpm = 1200
+	bpm = 120
 	noteSize = 1 # Whole notes
 
 	vis = d3.select('#exercise')
@@ -82,6 +82,7 @@ start = (notes, bpm, noteSize) ->
 		degree: note.degree
 		expectedAt: note.time * Theory.timeBetweenNotes(bpm, noteSize)
 		playedAt: null
+		name: Theory.noteNameForKey note.key 
 	}
 
 	startTime = null # Determined from the first keydown event
@@ -100,7 +101,11 @@ start = (notes, bpm, noteSize) ->
 			data.push {
 				key: e.key
 				expectedAt: null
-				playedAt: time
+				playedAt: time			# # enter.append('text').attr(
+			# # 	y: 30
+			# # 	fill: '#999'
+			# # ).text((d) -> d.text)
+
 			}
 
 		d note
@@ -162,7 +167,7 @@ M = {
 			for num in [0...opts.beats]
 				# NOTE: Notes and beats are not one-to-one.
 				# TODO: Should have real text or perhaps just the first and last have timing info
-				beats.push { num, text: Theory.notes[num % 12] } 
+				beats.push { num } 
 				majors.push num
 				unless num == opts.beats - 1
 					minors.push num + 0.25
@@ -192,30 +197,30 @@ M = {
 			nome.select('.axis.major').call(major)
 			nome.select('.axis.minor').call(minor)
 
-			update = nome.selectAll('.beat').data(beats)
-			enter = update.enter().append('g').attr(
-				class: 'beat'
-				transform: (d) -> "translate(#{x(d.num)}, 25)" # TODO: - beatRadius(d, i)
-				opacity: 1e-6
-			)
-			enter.append('circle').attr(
-				r: beatRadius
-				fill: '#999'
-			)
-			# enter.append('text').attr(
-			# 	y: 30
+			# update = nome.selectAll('.beat').data(beats)
+			# enter = update.enter().append('g').attr(
+			# 	class: 'beat'
+			# 	transform: (d) -> "translate(#{x(d.num)}, 25)" # TODO: - beatRadius(d, i)
+			# 	opacity: 1e-6
+			# )
+			# enter.append('circle').attr(
+			# 	r: beatRadius
 			# 	fill: '#999'
-			# ).text((d) -> d.text)
+			# )
+			# # enter.append('text').attr(
+			# # 	y: 30
+			# # 	fill: '#999'
+			# # ).text((d) -> d.text)
 
-			update.transition()
-				.delay((d, i) -> i * 10)
-				.duration(500)
-				.ease('ease-out-expo')
-				.attr({
-					opacity: 1
+			# update.transition()
+			# 	.delay((d, i) -> i * 10)
+			# 	.duration(500)
+			# 	.ease('ease-out-expo')
+			# 	.attr({
+			# 		opacity: 1
 
-				})
-			update.exit().remove()
+			# 	})
+			# update.exit().remove()
 
 		_.accessors(render, opts)
 			.addAll()
@@ -229,7 +234,6 @@ M = {
 			pad: 0
 			bpm: 120
 			noteSize: 1
-			noteRadius: 5
 			notes: [ ]
 			vis: null
 		}
@@ -260,6 +264,8 @@ M = {
 				.domain(d3.extent(data, (d) -> d.degree))
 				.range([opts.height, 0]) # Position higher notes higher up
 
+			y = -> -75
+
 			update = opts.vis.select('.notes').selectAll('.note').data(data)
 			enter = update.enter().append('g').attr(
 				class: 'note'
@@ -268,11 +274,15 @@ M = {
 
 			enter.append('rect').attr(
 				class: 'indicator'
-				r: opts.noteRadius
-				rx: 2
-				ry: 2
 				fill: '#fff'
+				x: 0
 			)
+
+			enter.append('text').attr(
+				y: 30
+				fill: '#999'
+			).text((d) -> d.name)
+
 
 			colorScale = d3.scale.linear()
 				.domain([-1000, 0, 1000])
@@ -280,12 +290,20 @@ M = {
 				.interpolate(d3.interpolateLab)
 				.clamp(true)
 
-			errorScale = (error) -> max(abs(x(error) - x(0)), 3)
+			noteHeight = 10
+			noteWidth = 2
 
-			update.select('.indicator').transition().ease('cubic-out').duration(200).attr(
-				r: (d) -> if d.error? then errorScale(d.error) else opts.noteRadius
-				width: (d) -> if d.error? then errorScale(d.error) * 2 else opts.noteRadius * 2
-				height: (d) -> opts.noteRadius * 2
+			errorScale = (error) -> x(error) - x(0)
+
+
+			update.select('.indicator').transition().ease('cubic-out').duration(0).attr(
+				width: (d) -> if d.error? then abs errorScale(d.error) else noteWidth
+				height: noteHeight
+				x: (d) -> 
+					if d.error?
+						min 0, errorScale(d.error)
+					else
+						0
 				fill: (d) -> if d.error? then colorScale(d.error) else '#fff'
 			)
 
