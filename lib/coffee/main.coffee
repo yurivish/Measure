@@ -222,7 +222,7 @@ M = {
 
 		colorScale = d3.scale.linear()
 			.domain([-50, 0, 50])
-			.range(['#ff0000', '#fff', '#009eff'])
+			.range(['#009eff', '#fff', '#ff0000'])
 			.interpolate(d3.interpolateLab)
 			.clamp(true)
 

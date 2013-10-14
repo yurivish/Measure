@@ -451,7 +451,7 @@
         seq: null,
         played: null
       };
-      colorScale = d3.scale.linear().domain([-50, 0, 50]).range(['#ff0000', '#fff', '#009eff']).interpolate(d3.interpolateLab).clamp(true);
+      colorScale = d3.scale.linear().domain([-50, 0, 50]).range(['#009eff', '#fff', '#ff0000']).interpolate(d3.interpolateLab).clamp(true);
       color = function(d) {
         switch (false) {
           case !(Math.abs(d.errorMs) < 10):
