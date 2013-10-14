@@ -226,7 +226,7 @@
   };
 
   Metronome = (function() {
-    var active, dispatch, gainNode, interval, lookaheadTime, nextNoteTime, notes, playNoteAt, schedule, start, timeout, volume;
+    var active, dispatch, gainNode, index, interval, lookaheadTime, nextNoteTime, playNoteAt, schedule, seq, timeout, volume;
     dispatch = d3.dispatch('tick');
     audioContext = new AudioContext();
     active = false;
@@ -236,20 +236,23 @@
     gainNode = audioContext.createGain();
     gainNode.connect(audioContext.destination);
     gainNode.gain.value = volume;
-    start = 0;
-    notes = Theory.major(60);
+    seq = null;
+    index = 0;
     playNoteAt = function(time) {
-      var fadeDuration, osc, tickDuration;
+      var fadeDuration, key, osc, tickDuration;
       osc = audioContext.createOscillator();
       osc.connect(gainNode);
-      osc.frequency.value = Theory.pitchForKey(notes[start++ % notes.length]);
-      tickDuration = 1 / 10;
-      fadeDuration = 1 / 1000;
-      gainNode.gain.setValueAtTime(0, time);
-      gainNode.gain.linearRampToValueAtTime(volume, time + fadeDuration);
-      gainNode.gain.linearRampToValueAtTime(0.0, time + tickDuration - fadeDuration);
-      osc.noteOn(time);
-      return osc.noteOff(time + tickDuration);
+      if (index < seq.notes.length && (key = seq.notes[index].key) !== null) {
+        osc.frequency.value = Theory.pitchForKey(key);
+        tickDuration = 1 / 10;
+        fadeDuration = 1 / 1000;
+        gainNode.gain.setValueAtTime(0, time);
+        gainNode.gain.linearRampToValueAtTime(volume, time + fadeDuration);
+        gainNode.gain.linearRampToValueAtTime(0.0, time + tickDuration - fadeDuration);
+        osc.noteOn(time);
+        osc.noteOff(time + tickDuration);
+      }
+      return index += seq.beatSize / seq.noteSize;
     };
     schedule = function() {
       while (nextNoteTime <= audioContext.currentTime + lookaheadTime) {
@@ -260,7 +263,8 @@
         return timeout = setTimeout(schedule, Math.min(interval / 2, 200));
       }
     };
-    dispatch.start = function(bpm) {
+    dispatch.start = function(bpm, _seq) {
+      seq = _seq;
       interval = 60 / bpm;
       lookaheadTime = interval * 2;
       nextNoteTime = audioContext.currentTime;
@@ -324,7 +328,7 @@
       sequenceVis = M.sequence().width(width).pad(pad).bpm(bpm).vis(vis.append('g').attr('class', 'seq-vis')).seq(seq);
       sequenceVis();
       return start(seq, bpm).on('start', function() {
-        return Metronome.start(120);
+        return Metronome.start(120, seq);
       }).on('update', function(played) {
         return errorVis.played(played);
       }).on('end', function() {

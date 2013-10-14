@@ -10,27 +10,29 @@ Metronome = do ->
 	gainNode.connect(audioContext.destination)
 	gainNode.gain.value = volume
 
-	start = 0
-	notes = Theory.major(60)
+	seq = null
+	index = 0
 
 	playNoteAt = (time) ->
 		osc = audioContext.createOscillator()
 		osc.connect(gainNode)
-		# TODO:
-		# osc.frequency.value = 660.0
-		osc.frequency.value = Theory.pitchForKey(notes[start++ % notes.length])
 
-		tickDuration = 1/10
-		fadeDuration = 1/1000
+		# For now don't play anything if there is no note, 
+		if index < seq.notes.length and (key = seq.notes[index].key) != null
+			osc.frequency.value = Theory.pitchForKey(key)
 
-		# Fade in and out
-		gainNode.gain.setValueAtTime(0, time)
-		gainNode.gain.linearRampToValueAtTime(volume, time + fadeDuration)
-		gainNode.gain.linearRampToValueAtTime(0.0, time + tickDuration - fadeDuration)
+			tickDuration = 1/10
+			fadeDuration = 1/1000
 
-		# Play the sound
-		osc.noteOn(time)
-		osc.noteOff(time + tickDuration)
+			# Fade in and out
+			gainNode.gain.setValueAtTime(0, time)
+			gainNode.gain.linearRampToValueAtTime(volume, time + fadeDuration)
+			gainNode.gain.linearRampToValueAtTime(0.0, time + tickDuration - fadeDuration)
+
+			# Play the sound
+			osc.noteOn(time)
+			osc.noteOff(time + tickDuration)
+		index += seq.beatSize / seq.noteSize
 
 	schedule = ->
 		while nextNoteTime <= audioContext.currentTime + lookaheadTime
@@ -38,7 +40,8 @@ Metronome = do ->
 			nextNoteTime += interval
 		if active then timeout = setTimeout schedule, Math.min(interval / 2, 200)
 
-	dispatch.start = (bpm) ->
+	dispatch.start = (bpm, _seq) ->
+		seq = _seq
 		interval = 60 / bpm
 		lookaheadTime = interval * 2
 		nextNoteTime = audioContext.currentTime

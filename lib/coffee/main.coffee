@@ -64,7 +64,7 @@ _.defer ->
 			.on('start', ->
 				# NOTE: Is this slightly out of sync because we didn't compensate
 				# for the time take to get to this line of code?
-				Metronome.start(120)
+				Metronome.start(120, seq)
 			).on('update', (played) ->
 				errorVis.played(played))
 			.on('end', ->
