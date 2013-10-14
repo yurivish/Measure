@@ -30,7 +30,7 @@ _.defer ->
 
 		beatsPerMeasure: 4 		# Numerator of time signature
 		beatSize: 0.25 			# Denominator of time signature
-		noteSize: 0.25			# Indirectly specifies the number of notes in a beat
+		noteSize: 0.125			# Indirectly specifies the number of notes in a beat
 	}
 	sequence.beats = Math.ceil sequence.notes.length * (sequence.noteSize / sequence.beatSize)
 
@@ -48,6 +48,13 @@ _.defer ->
 
 		timeVis()
 
+		errorVis = M.error()
+			.width(width)
+			.pad(pad)
+			.bpm(bpm)
+			.vis(vis.append('g').attr('class', 'error-vis'))
+			.seq(seq)
+
 		sequenceVis = M.sequence()
 			.width(width)
 			.pad(pad)
@@ -57,12 +64,6 @@ _.defer ->
 
 		sequenceVis()
 
-		errorVis = M.error()
-			.width(width)
-			.pad(pad)
-			.bpm(bpm)
-			.vis(vis.append('g').attr('class', 'error-vis'))
-			.seq(seq)
 
 		start(seq, bpm)
 			.on('start', (played) -> d 'start')
@@ -77,16 +78,16 @@ _.defer ->
 		played = [ ]
 		alreadyPlayed = { }
 
-		startTime = null # Determined from the first keydown event
-
 		noteIndexToBeatTime = d3.scale.linear()
 			.domain([0, seq.notes.length])
-			.range([0, seq.beats * seq.beatSize])
+			# .range([0, seq.beats * seq.beatSize])
+			.range([0, seq.notes.length * seq.noteSize])
 
 		noteIndexToTime = d3.scale.linear()
 			.domain([0, seq.notes.length])	
-			.range([0, seq.beats * 1000 * 60 * (1 / bpm)])
+			.range([0, (1 / bpm) * 60 * 1000 * seq.notes.length]) #seq.beats * 1000 * 60 * (1 / bpm)])
 
+		startTime = null # Determined from the first keydown event
 		instrument.on 'keydown.notes', (e) ->
 			unless startTime?
 				startTime = e.time
@@ -99,7 +100,7 @@ _.defer ->
 				note = seq.notes[index]
 				expectedMs = noteIndexToTime(note.index)
 				expectedBeats = noteIndexToBeatTime(note.index)
-				playedMs = noteIndexToTime noteIndexToTime.invert(time)
+				playedMs = time
 				playedBeats = noteIndexToBeatTime noteIndexToTime.invert(time)
 				errorMs = playedMs - expectedMs
 				errorBeats = playedBeats - expectedBeats
@@ -117,7 +118,7 @@ _.defer ->
 				# 	expectedAt: null
 				# 	playedAt: time
 				# }
-			d(played...)
+			# d(played...)
 			dispatch.update(played)
 
 		findCorrespondingIndex = (key, time) ->
@@ -128,13 +129,13 @@ _.defer ->
 			# NOTE: Extra notes end up at the back, unsorted. We'll want to revise this when we 
 			# implement binary search.
 			timeWindow = 2000
-			for note, index in seq.notes
+			for note in seq.notes
 				# break unless note.playedAt? # Never skip past an unplayed note
 				# If the note matches, was expected, hasn't been played, and is in our window, return it.
-				if index of alreadyPlayed
+				if note.index of alreadyPlayed
 					continue
-				else if note.key == key and Math.abs(noteIndexToTime(index) - time) < timeWindow
-					return index
+				else if note.key == key and Math.abs(noteIndexToTime(note.index) - time) < timeWindow
+					return note.index
 			return null
 
 		instrument.emulateKeysWithKeyboard seq.notes.map ({key}) -> key
@@ -158,11 +159,14 @@ _.defer ->
 		dispatch
 
 M = {
+	noteTop: 35
+	noteHeight: 15
+
 	time: ->
 		opts = {
 			width: 300
 			pad: 0
-			beats: 10 		# Number of beats to visualize
+			beats: 11 		# Number of beats to visualize
 			beatSize: 0.25 	# Denominator of time signature; used for major ticks
 			noteSize: 0.25 	# Base size of a note; used for minor ticks
 			bpm: 120		# Beats per minute
@@ -213,14 +217,24 @@ M = {
 			played: null
 		}
 
+		colorScale = d3.scale.linear()
+			.domain([-25, 0, 25])
+			.range(['#ff0000', '#fff', '#009eff'])
+			.interpolate(d3.interpolateLab)
+			.clamp(true)
+
 		color = (d) ->
+
 			switch
 				when Math.abs(d.errorMs) < 10
 					'#00fa00'
-				when d.errorBeats < 0
+				when d.errorMs < 0
 					'#ff0012'
 				else
 					'#00b6ff'
+
+			colorScale(d.errorMs)
+
 
 		render = ->
 			seq = opts.seq
@@ -240,7 +254,7 @@ M = {
 			enter = update.enter().append('g').attr('class', 'note')
 
 			# enter.append('rect').attr(
-			# 	x: (d) -> Math.round x(d.expectedBeats + d.errorBeats)# + if d.errorBeats > 0 then -(x(d.errorBeats) - x(0)) else 0
+			# 	x: (d) -> Math.round x(d.expectedBeats + d.errorBeats) + if d.errorBeats > 0 then -(x(d.errorBeats) - x(0)) else 0
 			# 	y: 20
 			# 	width: 5#(d) -> Math.abs x(d.errorBeats) - x(0)
 			# 	height: 5
@@ -249,39 +263,63 @@ M = {
 			# )
 			
 			# enter.append('rect').attr(
-			# 	x: (d) -> Math.round x(d.expectedBeats)
-			# 	y: 35
-			# 	# r: (d) -> Math.min 10, Math.abs x(d.errorBeats) - x(0)
-			# 	width: 4
-			# 	height: 10
+			# 	# x: (d) -> Math.round x(d.expectedBeats)
+			# 	x: (d) -> Math.round x(d.expectedBeats + d.errorBeats) + if d.errorBeats > 0 then -(x(d.errorBeats) - x(0)) else 0
+			# 	y: M.noteTop
+			# 	# width: 4
+			# 	width: (d) -> Math.max 1, Math.abs x(d.errorBeats) - x(0)
+			# 	height: M.noteHeight
 			# 	stroke: color
 			# 	fill: color
 			# )
 
-			lo = 0#14
-			hi = 35
-			mid = (lo + hi) / 2
-			enter.append('circle').attr(
-				cx: (d) -> x(d.expectedBeats + d.errorBeats)
-				cy: mid
-				r: 3
+			enter.append('rect').attr(
+				# x: (d) -> Math.round x(d.expectedBeats)
+				x: (d) -> Math.round x(d.expectedBeats)
+				y: 0
+				height: 14
+				# y: M.noteTop
+				# height: M.noteHeight
+				width: 0
+				stroke: color
 				fill: color
+			).transition().ease('exp-out').duration(350).attr(
+				width: x(seq.noteSize) - x(0)
 			)
 
-			enter.append('line').attr(
-				x1: (d) -> x(d.expectedBeats)
-				x2: (d) -> x(d.expectedBeats + d.errorBeats)
-				y1: lo
-				y2: mid
-				stroke: color
-			)
-			enter.append('line').attr(
-				x1: (d) -> x(d.expectedBeats)
-				x2: (d) -> x(d.expectedBeats + d.errorBeats)
-				y1: hi
-				y2: mid
-				stroke: color
-			)
+			# lo = 0#14
+			# hi = M.noteTop
+			# mid = (lo + hi) / 2
+			# enter.append('circle').attr(
+			# 	cx: (d) -> x(d.expectedBeats + d.errorBeats)
+			# 	cy: mid
+			# 	r: 3
+			# 	fill: color
+			# )
+
+			# enter.append('line').attr(
+			# 	x1: (d) -> x(d.expectedBeats)
+			# 	x2: (d) -> x(d.expectedBeats + d.errorBeats)
+			# 	y1: lo
+			# 	y2: mid
+			# 	stroke: color
+			# )
+			# enter.append('line').attr(
+			# 	x1: (d) -> x(d.expectedBeats)
+			# 	x2: (d) -> x(d.expectedBeats + d.errorBeats)
+			# 	y1: hi
+			# 	y2: mid
+			# 	stroke: color
+			# )
+
+			# enter.append('polygon').attr(
+			# 	points: (d) -> [
+			# 		x(d.expectedBeats), lo
+			# 		x(d.expectedBeats + d.errorBeats), mid	
+			# 		x(d.expectedBeats), hi
+			# 	].join(',')
+			# 	fill: color
+			# )
 
 			update.exit().remove()
 
@@ -308,7 +346,7 @@ M = {
 				.domain([0, duration])
 				.range([opts.pad, opts.width - opts.pad])
 
-			y = -> 35
+			y = -> M.noteTop
 
 			update = opts.vis.selectAll('.note').data(notes)
 			enter = update.enter().append('g').attr(
@@ -319,7 +357,7 @@ M = {
 
 			enter.append('rect').attr(
 				width: 4
-				height: 10
+				height: M.noteHeight
 				fill: '#fff'
 				stroke: '#fff' # Align with the time markings
 			)

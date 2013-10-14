@@ -296,7 +296,7 @@
       ],
       beatsPerMeasure: 4,
       beatSize: 0.25,
-      noteSize: 0.25
+      noteSize: 0.125
     };
     sequence.beats = Math.ceil(sequence.notes.length * (sequence.noteSize / sequence.beatSize));
     loadSequence = function(seq) {
@@ -305,9 +305,9 @@
       bpm = 120;
       timeVis = M.time().beats(seq.beats).beatSize(seq.beatSize).noteSize(seq.noteSize).bpm(bpm).width(width).pad(pad).vis(vis.append('g').attr('class', 'time-vis'));
       timeVis();
+      errorVis = M.error().width(width).pad(pad).bpm(bpm).vis(vis.append('g').attr('class', 'error-vis')).seq(seq);
       sequenceVis = M.sequence().width(width).pad(pad).bpm(bpm).vis(vis.append('g').attr('class', 'seq-vis')).seq(seq);
       sequenceVis();
-      errorVis = M.error().width(width).pad(pad).bpm(bpm).vis(vis.append('g').attr('class', 'error-vis')).seq(seq);
       return start(seq, bpm).on('start', function(played) {
         return d('start');
       }).on('update', function(played) {
@@ -324,9 +324,9 @@
       dispatch = d3.dispatch('start', 'update', 'end');
       played = [];
       alreadyPlayed = {};
+      noteIndexToBeatTime = d3.scale.linear().domain([0, seq.notes.length]).range([0, seq.notes.length * seq.noteSize]);
+      noteIndexToTime = d3.scale.linear().domain([0, seq.notes.length]).range([0, (1 / bpm) * 60 * 1000 * seq.notes.length]);
       startTime = null;
-      noteIndexToBeatTime = d3.scale.linear().domain([0, seq.notes.length]).range([0, seq.beats * seq.beatSize]);
-      noteIndexToTime = d3.scale.linear().domain([0, seq.notes.length]).range([0, seq.beats * 1000 * 60 * (1 / bpm)]);
       instrument.on('keydown.notes', function(e) {
         var errorBeats, errorMs, expectedBeats, expectedMs, index, note, playedBeats, playedMs, time;
         if (startTime == null) {
@@ -340,7 +340,7 @@
           note = seq.notes[index];
           expectedMs = noteIndexToTime(note.index);
           expectedBeats = noteIndexToBeatTime(note.index);
-          playedMs = noteIndexToTime(noteIndexToTime.invert(time));
+          playedMs = time;
           playedBeats = noteIndexToBeatTime(noteIndexToTime.invert(time));
           errorMs = playedMs - expectedMs;
           errorBeats = playedBeats - expectedBeats;
@@ -356,19 +356,18 @@
         } else {
           0;
         }
-        d.apply(null, played);
         return dispatch.update(played);
       });
       findCorrespondingIndex = function(key, time) {
-        var index, note, timeWindow, _i, _len, _ref2;
+        var note, timeWindow, _i, _len, _ref2;
         timeWindow = 2000;
         _ref2 = seq.notes;
-        for (index = _i = 0, _len = _ref2.length; _i < _len; index = ++_i) {
-          note = _ref2[index];
-          if (index in alreadyPlayed) {
+        for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+          note = _ref2[_i];
+          if (note.index in alreadyPlayed) {
             continue;
-          } else if (note.key === key && Math.abs(noteIndexToTime(index) - time) < timeWindow) {
-            return index;
+          } else if (note.key === key && Math.abs(noteIndexToTime(note.index) - time) < timeWindow) {
+            return note.index;
           }
         }
         return null;
@@ -390,12 +389,14 @@
   });
 
   M = {
+    noteTop: 35,
+    noteHeight: 15,
     time: function() {
       var opts, render;
       opts = {
         width: 300,
         pad: 0,
-        beats: 10,
+        beats: 11,
         beatSize: 0.25,
         noteSize: 0.25,
         bpm: 120,
@@ -435,7 +436,7 @@
       return _.accessors(render, opts).addAll().done();
     },
     error: function() {
-      var color, opts, render;
+      var color, colorScale, opts, render;
       opts = {
         width: 300,
         pad: 0,
@@ -444,56 +445,39 @@
         seq: null,
         played: null
       };
+      colorScale = d3.scale.linear().domain([-25, 0, 25]).range(['#ff0000', '#fff', '#009eff']).interpolate(d3.interpolateLab).clamp(true);
       color = function(d) {
         switch (false) {
           case !(Math.abs(d.errorMs) < 10):
-            return '#00fa00';
-          case !(d.errorBeats < 0):
-            return '#ff0012';
+            '#00fa00';
+            break;
+          case !(d.errorMs < 0):
+            '#ff0012';
+            break;
           default:
-            return '#00b6ff';
+            '#00b6ff';
         }
+        return colorScale(d.errorMs);
       };
       render = function() {
-        var duration, enter, hi, lo, mid, played, seq, update, x;
+        var duration, enter, played, seq, update, x;
         seq = opts.seq;
         played = opts.played;
         duration = seq.beats * seq.beatSize;
         x = d3.scale.linear().domain([0, duration]).range([opts.pad, opts.width - opts.pad]);
         update = opts.vis.selectAll('.note').data(played);
         enter = update.enter().append('g').attr('class', 'note');
-        lo = 0;
-        hi = 35;
-        mid = (lo + hi) / 2;
-        enter.append('circle').attr({
-          cx: function(d) {
-            return x(d.expectedBeats + d.errorBeats);
+        enter.append('rect').attr({
+          x: function(d) {
+            return Math.round(x(d.expectedBeats));
           },
-          cy: mid,
-          r: 3,
+          y: 0,
+          height: 14,
+          width: 0,
+          stroke: color,
           fill: color
-        });
-        enter.append('line').attr({
-          x1: function(d) {
-            return x(d.expectedBeats);
-          },
-          x2: function(d) {
-            return x(d.expectedBeats + d.errorBeats);
-          },
-          y1: lo,
-          y2: mid,
-          stroke: color
-        });
-        enter.append('line').attr({
-          x1: function(d) {
-            return x(d.expectedBeats);
-          },
-          x2: function(d) {
-            return x(d.expectedBeats + d.errorBeats);
-          },
-          y1: hi,
-          y2: mid,
-          stroke: color
+        }).transition().ease('exp-out').duration(350).attr({
+          width: x(seq.noteSize) - x(0)
         });
         return update.exit().remove();
       };
@@ -515,7 +499,7 @@
         duration = seq.beats * seq.beatSize;
         x = d3.scale.linear().domain([0, duration]).range([opts.pad, opts.width - opts.pad]);
         y = function() {
-          return 35;
+          return M.noteTop;
         };
         update = opts.vis.selectAll('.note').data(notes);
         enter = update.enter().append('g').attr({
@@ -527,7 +511,7 @@
         update.exit().remove();
         enter.append('rect').attr({
           width: 4,
-          height: 10,
+          height: M.noteHeight,
           fill: '#fff',
           stroke: '#fff'
         });
