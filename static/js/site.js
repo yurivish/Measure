@@ -267,14 +267,13 @@
   instrument = initInstrument();
 
   _.defer(function() {
-    var height, loadSequence, sequence, start, vis, width, _ref1;
+    var loadSequence, sequence, start, vis, width;
     d('Starting');
     vis = d3.select('#piece');
-    _ref1 = vis.node().getBoundingClientRect(), width = _ref1.width, height = _ref1.height;
-    height = 200;
+    width = window.innerWidth;
     vis.attr({
       width: width,
-      height: height + 150
+      height: 200
     });
     sequence = {
       notes: _.flatten([Theory.major(60), Theory.major(72), 72 + 12, null, 72 + 12, Theory.major(72).reverse(), Theory.major(60).reverse()]).map(function(key, index) {
@@ -288,6 +287,10 @@
           from: 0,
           to: 14,
           text: 'Ascend'
+        }, {
+          from: 15,
+          to: 15,
+          rest: true
         }, {
           from: 16,
           to: 30,
@@ -309,11 +312,11 @@
       sequenceVis = M.sequence().width(width).pad(pad).bpm(bpm).vis(vis.append('g').attr('class', 'seq-vis')).seq(seq);
       sequenceVis();
       return start(seq, bpm).on('start', function(played) {
-        return d('start');
+        return Metronome.start(120);
       }).on('update', function(played) {
         return errorVis.played(played);
       }).on('end', function() {
-        return d('end');
+        return Metronome.stop();
       });
     };
     _.defer(function() {
@@ -360,11 +363,11 @@
         return dispatch.update(played);
       });
       findCorrespondingIndex = function(key, time) {
-        var note, timeWindow, _i, _len, _ref2;
+        var note, timeWindow, _i, _len, _ref1;
         timeWindow = 2000;
-        _ref2 = seq.notes;
-        for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-          note = _ref2[_i];
+        _ref1 = seq.notes;
+        for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+          note = _ref1[_i];
           if (note.index in alreadyPlayed) {
             continue;
           } else if (note.key === key && Math.abs(noteIndexToTime(note.index) - time) < timeWindow) {
@@ -374,9 +377,7 @@
         }
         return null;
       };
-      instrument.emulateKeysWithKeyboard(seq.notes.filter(function(note) {
-        return note.key != null;
-      }).map(function(_arg) {
+      instrument.emulateKeysWithKeyboard(seq.notes.map(function(_arg) {
         var key;
         key = _arg.key;
         return key;
@@ -493,7 +494,7 @@
             return line([
               {
                 x: x(d.expectedBeats),
-                y: mid - d.errorMs / 5
+                y: mid - d.errorMs / 15
               }, {
                 x: x(d.expectedBeats + seq.noteSize) - (x(d.expectedBeats + seq.noteSize) - x(d.expectedBeats)) / 2,
                 y: mid
@@ -520,7 +521,7 @@
         seq: null
       };
       render = function() {
-        var annKeyLabel, duration, enter, keyLabelPadding, notes, seq, update, x, xAnn, y, yAnn;
+        var annKeyLabel, duration, enter, keyLabelPadding, notes, restColor, seq, update, x, xAnn, y, yAnn;
         seq = opts.seq;
         notes = seq.notes;
         duration = seq.beats * seq.beatSize;
@@ -536,6 +537,7 @@
           }
         });
         update.exit().remove();
+        restColor = '#777';
         enter.append('rect').attr({
           width: 4,
           height: M.noteHeight,
@@ -543,14 +545,14 @@
             if (d.key) {
               return '#fff';
             } else {
-              return '#666';
+              return restColor;
             }
           },
           stroke: function(d) {
             if (d.key) {
               return '#fff';
             } else {
-              return '#666';
+              return restColor;
             }
           }
         });
@@ -569,11 +571,24 @@
             "class": type + '-key',
             transform: function(d) {
               return "translate(" + (xAnn(d, type)) + ", " + (yAnn()) + ")";
+            },
+            fill: function(d) {
+              if (d.rest) {
+                return restColor;
+              } else {
+                return '#fff';
+              }
             }
-          }).text(function(d) {
-            return Theory.nameForKey(notes[d[type]].key, true);
           }).each(function() {
             return this.parentNode[type + 'Key'] = this;
+          }).text(function(d) {
+            var key;
+            key = notes[d[type]].key;
+            if (key) {
+              return Theory.nameForKey(key, true);
+            } else {
+              return 'Rest';
+            }
           });
         };
         annKeyLabel('to');
@@ -592,7 +607,13 @@
           y2: function(d) {
             return yAnn() - 4;
           },
-          stroke: '#555'
+          stroke: function(d) {
+            if (d.from === d.to) {
+              return 'transparent';
+            } else {
+              return '#555';
+            }
+          }
         });
         return enter.append('text').attr({
           transform: function(d) {

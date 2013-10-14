@@ -4,11 +4,8 @@ _.defer ->
 	d 'Starting'
 
 	vis = d3.select('#piece')
-
-	# NOTE: This does not work. The height turns out to be the entire window height. Thought it worked yesterday..?
-	{ width, height } = vis.node().getBoundingClientRect()
-	height = 200
-	vis.attr({ width, height: height + 150 })
+	width = window.innerWidth
+	vis.attr(width: width, height: 200)
 
 	sequence = {
 		notes: _.flatten([
@@ -19,13 +16,11 @@ _.defer ->
 			72 + 12 # Top C
 			Theory.major(72).reverse()
 			Theory.major(60).reverse()
-		]).map (key, index) -> {
-			key
-			index
-		}
+		]).map (key, index) -> { key, index }
 
 		annotations: [
 			{ from: 0,  to: 14, text: 'Ascend'}
+			{ from: 15,  to: 15, rest: true }
 			{ from: 16, to: 30, text: 'Descend'}
 		]
 
@@ -66,9 +61,14 @@ _.defer ->
 		sequenceVis()
 
 		start(seq, bpm)
-			.on('start', (played) -> d 'start')
-			.on('update', (played) -> errorVis.played(played))
-			.on('end', -> d 'end')
+			.on('start', (played) ->
+				# NOTE: Is this slightly out of sync because we didn't compensate
+				# for the time take to get to this line of code?
+				Metronome.start(120)
+			).on('update', (played) -> errorVis.played(played))
+			.on('end', -> 
+				Metronome.stop()
+			)
 
 	_.defer -> loadSequence(sequence)
 
@@ -140,16 +140,8 @@ _.defer ->
 					return note.index
 			return null
 
-		instrument.emulateKeysWithKeyboard seq.notes.filter((note) -> note.key?).map ({key}) -> key
-
-		# TODO: End!
-
-		# # End the piece once the amount of time that it takes has elapsed
-		# # BUG: Ends early...
-		# duration = noteSize * piece.length
-		# endTimeout = setTimeout ->
-		# 	dispatch.complete(data)
-		# , duration * 2 # BUG: Double to compensate for wrong timing ???
+		# To filter rests: .filter((note) -> note.key?)
+		instrument.emulateKeysWithKeyboard seq.notes.map ({key}) -> key
 
 		# Expose an abort method to ends the piece early.
 		dispatch.abort = ->
@@ -269,7 +261,7 @@ M = {
 			mid = (M.majorTickSize + M.noteTop) / 2
 			enter.append('path').attr(
 				d: (d) -> line([
-					{ x: x(d.expectedBeats), y: mid - d.errorMs / 5 }
+					{ x: x(d.expectedBeats), y: mid - d.errorMs / 15 } # 5
 					{ x: x(d.expectedBeats + seq.noteSize) - (x(d.expectedBeats + seq.noteSize) - x(d.expectedBeats)) / 2, y: mid }
 					{ x: x(d.expectedBeats + seq.noteSize), y: mid }
 				])
@@ -311,11 +303,12 @@ M = {
 			)
 			update.exit().remove()
 
+			restColor = '#777'
 			enter.append('rect').attr(
 				width: 4
 				height: M.noteHeight
-				fill: (d) -> if d.key then '#fff' else '#666'
-				stroke: (d) -> if d.key then '#fff' else '#666' # Align with the time markings
+				fill: (d) -> if d.key then '#fff' else restColor
+				stroke: (d) -> if d.key then '#fff' else restColor # Align with the time markings
 			)
 
 			# Annotations
@@ -332,7 +325,15 @@ M = {
 				enter.append('text').attr(
 					class: type + '-key'
 					transform: (d) -> "translate(#{xAnn(d, type)}, #{yAnn()})"
-				).text((d) -> Theory.nameForKey notes[d[type]].key, true).each -> this.parentNode[type + 'Key'] = this
+					fill: (d) -> if d.rest then restColor else '#fff'
+				).each(-> this.parentNode[type + 'Key'] = this
+				).text((d) -> 
+					key = notes[d[type]].key
+					if key
+						Theory.nameForKey(key, true)
+					else
+						'Rest'
+				)
 			
 			annKeyLabel 'to'
 			annKeyLabel 'from'
@@ -344,7 +345,7 @@ M = {
 				x2: (d) -> xAnn(d, 'to') - keyLabelPadding
 				y1: (d) -> yAnn() - 4 # Tweaked for 12px labels.
 				y2: (d) -> yAnn() - 4
-				stroke: '#555'
+				stroke: (d) -> if d.from == d.to then 'transparent' else '#555'
 			)
 
 			# Main annotation text (e.g. 'Ascend')

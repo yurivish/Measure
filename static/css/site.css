@@ -25,8 +25,8 @@ h1,h2{font-size:36px;line-height:36px}
 #page #piece text.name,#page #piece text.instruction{font-size:12px}
 #page #piece .error-vis rect{shape-rendering:crispEdges}
 #page #piece .seq-vis rect{shape-rendering:crispEdges}
-#page #piece .seq-vis .annotation{font-size:12px;fill:#fff}
+#page #piece .seq-vis .annotation{font-size:12px}
 #page #piece .axis text{font:10px sans-serif;display:none}
 #page #piece .axis .domain{display:none}
-#page #piece .axis line,#page #piece .axis path{fill:none;stroke:#555;shape-rendering:crispEdges}
+#page #piece .axis line,#page #piece .axis path{fill:none;stroke:#666;shape-rendering:crispEdges}
 
