@@ -151,6 +151,9 @@ h1, h2
 		// .contour
 		// 	stroke #fff
 
+		.error-vis
+			rect
+				shape-rendering crispEdges
 		.seq-vis
 			rect
 				shape-rendering crispEdges
@@ -166,10 +169,13 @@ h1, h2
 			.domain
 				display none
 
-
 			line, path
 				fill none
 				stroke #555
 				shape-rendering crispEdges
+
+			&.full
+				line, path
+					stroke #222
 
 

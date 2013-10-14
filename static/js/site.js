@@ -344,6 +344,7 @@
           playedBeats = noteIndexToBeatTime(noteIndexToTime.invert(time));
           errorMs = playedMs - expectedMs;
           errorBeats = playedBeats - expectedBeats;
+          d(errorMs);
           played.push({
             key: e.key,
             expectedMs: expectedMs,
@@ -389,10 +390,10 @@
   });
 
   M = {
-    noteTop: 35,
+    noteTop: 60,
     noteHeight: 15,
     time: function() {
-      var opts, render;
+      var major, minor, opts, render, x;
       opts = {
         width: 300,
         pad: 0,
@@ -402,36 +403,41 @@
         bpm: 120,
         vis: null
       };
+      x = d3.scale.linear();
+      major = d3.svg.axis().scale(x).orient('bottom').tickSize(14);
+      minor = d3.svg.axis().scale(x).orient('bottom').outerTickSize(0).innerTickSize(7);
       render = function() {
-        var duration, major, minor, n, x;
+        var duration, n, vis;
         duration = opts.beats * opts.beatSize;
-        x = d3.scale.linear().domain([0, duration]).range([opts.pad, opts.width - opts.pad]);
-        major = d3.svg.axis().scale(x).orient('bottom').tickValues((function() {
+        x.domain([0, duration]).range([opts.pad, opts.width - opts.pad]);
+        vis = opts.vis;
+        if (vis.select('.axis.major').empty()) {
+          vis.append('g').attr({
+            "class": 'axis major'
+          });
+          vis.append('g').attr({
+            "class": 'axis major'
+          });
+          vis.append('g').attr({
+            "class": 'axis minor'
+          });
+        }
+        vis.select('.axis.major').call(major.tickValues((function() {
           var _i, _ref1, _ref2, _results;
           _results = [];
           for (n = _i = 0, _ref1 = duration / opts.beatSize, _ref2 = opts.beatSize; _ref2 > 0 ? _i <= _ref1 : _i >= _ref1; n = _i += _ref2) {
             _results.push(n);
           }
           return _results;
-        })()).tickSize(14);
-        minor = d3.svg.axis().scale(x).orient('bottom').tickValues((function() {
+        })()));
+        return vis.select('.axis.minor').call(minor.tickValues((function() {
           var _i, _ref1, _ref2, _results;
           _results = [];
           for (n = _i = 0, _ref1 = duration / opts.noteSize, _ref2 = opts.noteSize; _ref2 > 0 ? _i <= _ref1 : _i >= _ref1; n = _i += _ref2) {
             _results.push(n);
           }
           return _results;
-        })()).outerTickSize(0).innerTickSize(7);
-        if (opts.vis.select('.axis.major').empty()) {
-          opts.vis.append('g').attr({
-            "class": 'axis major'
-          });
-          opts.vis.append('g').attr({
-            "class": 'axis minor'
-          });
-        }
-        opts.vis.select('.axis.major').call(major);
-        return opts.vis.select('.axis.minor').call(minor);
+        })()));
       };
       return _.accessors(render, opts).addAll().done();
     },
@@ -445,7 +451,7 @@
         seq: null,
         played: null
       };
-      colorScale = d3.scale.linear().domain([-25, 0, 25]).range(['#ff0000', '#fff', '#009eff']).interpolate(d3.interpolateLab).clamp(true);
+      colorScale = d3.scale.linear().domain([-50, 0, 50]).range(['#ff0000', '#fff', '#009eff']).interpolate(d3.interpolateLab).clamp(true);
       color = function(d) {
         switch (false) {
           case !(Math.abs(d.errorMs) < 10):
@@ -467,17 +473,20 @@
         x = d3.scale.linear().domain([0, duration]).range([opts.pad, opts.width - opts.pad]);
         update = opts.vis.selectAll('.note').data(played);
         enter = update.enter().append('g').attr('class', 'note');
-        enter.append('rect').attr({
-          x: function(d) {
-            return Math.round(x(d.expectedBeats));
+        enter.append('line').attr({
+          x1: function(d) {
+            return x(d.expectedBeats);
           },
-          y: 0,
-          height: 14,
-          width: 0,
-          stroke: color,
-          fill: color
-        }).transition().ease('exp-out').duration(350).attr({
-          width: x(seq.noteSize) - x(0)
+          x2: function(d) {
+            return x(d.expectedBeats + seq.noteSize);
+          },
+          y1: function(d) {
+            return 30 - d.errorMs / 50;
+          },
+          y2: function(d) {
+            return 30 + d.errorMs / 50;
+          },
+          stroke: color
         });
         return update.exit().remove();
       };

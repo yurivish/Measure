@@ -104,6 +104,7 @@ _.defer ->
 				playedBeats = noteIndexToBeatTime noteIndexToTime.invert(time)
 				errorMs = playedMs - expectedMs
 				errorBeats = playedBeats - expectedBeats
+				d errorMs
 				played.push {
 					key: e.key
 					expectedMs, expectedBeats
@@ -159,7 +160,7 @@ _.defer ->
 		dispatch
 
 M = {
-	noteTop: 35
+	noteTop: 60 # 35
 	noteHeight: 15
 
 	time: ->
@@ -173,35 +174,37 @@ M = {
 			vis: null
 		}
 
+		x = d3.scale.linear()
+
+		# One major tick per beat
+		major = d3.svg.axis()
+			.scale(x)
+			.orient('bottom')
+			.tickSize(14)
+
+		# One minor tick per note
+		minor = d3.svg.axis()
+			.scale(x)
+			.orient('bottom')
+			.outerTickSize(0)
+			.innerTickSize(7)
+
 		render = ->
 			# Scale from beat time to horizontal space
 			duration = opts.beats * opts.beatSize
-			x = d3.scale.linear()
+			x
 				.domain([0, duration])
 				.range([opts.pad, opts.width - opts.pad])
 
-			# One major tick per beat
-			major = d3.svg.axis()
-				.scale(x)
-				.orient('bottom')
-				.tickValues(n for n in [0..duration / opts.beatSize] by opts.beatSize)
-				.tickSize(14)
-
-			# One minor tick per note
-			minor = d3.svg.axis()
-				.scale(x)
-				.orient('bottom')
-				.tickValues(n for n in [0..duration / opts.noteSize] by opts.noteSize)
-				.outerTickSize(0)
-				.innerTickSize(7)
-
 			# Create axis parent elements if they don't exist
-			if opts.vis.select('.axis.major').empty()
-				opts.vis.append('g').attr(class: 'axis major')
-				opts.vis.append('g').attr(class: 'axis minor')
+			vis = opts.vis
+			if vis.select('.axis.major').empty()
+				vis.append('g').attr(class: 'axis major')
+				vis.append('g').attr(class: 'axis major')
+				vis.append('g').attr(class: 'axis minor')
 
-			opts.vis.select('.axis.major').call(major)
-			opts.vis.select('.axis.minor').call(minor)
+			vis.select('.axis.major').call major.tickValues(n for n in [0..duration / opts.beatSize] by opts.beatSize)
+			vis.select('.axis.minor').call minor.tickValues(n for n in [0..duration / opts.noteSize] by opts.noteSize)
 
 		_.accessors(render, opts)
 			.addAll()
@@ -218,7 +221,7 @@ M = {
 		}
 
 		colorScale = d3.scale.linear()
-			.domain([-25, 0, 25])
+			.domain([-50, 0, 50])
 			.range(['#ff0000', '#fff', '#009eff'])
 			.interpolate(d3.interpolateLab)
 			.clamp(true)
@@ -253,40 +256,31 @@ M = {
 			update = opts.vis.selectAll('.note').data(played)
 			enter = update.enter().append('g').attr('class', 'note')
 
+			# Rectangles embedded between notes
 			# enter.append('rect').attr(
-			# 	x: (d) -> Math.round x(d.expectedBeats + d.errorBeats) + if d.errorBeats > 0 then -(x(d.errorBeats) - x(0)) else 0
-			# 	y: 20
-			# 	width: 5#(d) -> Math.abs x(d.errorBeats) - x(0)
-			# 	height: 5
-			# 	fill: color
-			# 	stroke: color
-			# )
-			
-			# enter.append('rect').attr(
-			# 	# x: (d) -> Math.round x(d.expectedBeats)
 			# 	x: (d) -> Math.round x(d.expectedBeats + d.errorBeats) + if d.errorBeats > 0 then -(x(d.errorBeats) - x(0)) else 0
 			# 	y: M.noteTop
-			# 	# width: 4
 			# 	width: (d) -> Math.max 1, Math.abs x(d.errorBeats) - x(0)
 			# 	height: M.noteHeight
 			# 	stroke: color
 			# 	fill: color
 			# )
 
-			enter.append('rect').attr(
-				# x: (d) -> Math.round x(d.expectedBeats)
-				x: (d) -> Math.round x(d.expectedBeats)
-				y: 0
-				height: 14
-				# y: M.noteTop
-				# height: M.noteHeight
-				width: 0
-				stroke: color
-				fill: color
-			).transition().ease('exp-out').duration(350).attr(
-				width: x(seq.noteSize) - x(0)
-			)
+			# Rectangles below axes but above notes
+			# enter.append('rect').attr(
+			# 	# x: (d) -> Math.round x(d.expectedBeats)
+			# 	x: (d) -> Math.round x(d.expectedBeats)
+			# 	y: 30
+			# 	height: 14
+			# 	# y: M.noteTop
+			# 	# height: M.noteHeight
+			# 	width: 0
+			# 	fill: color
+			# ).transition().ease('exp-out').duration(350).attr(
+			# 	width: x(seq.noteSize) - x(0) + .5
+			# )
 
+			# Lines with a circle between 'em'
 			# lo = 0#14
 			# hi = M.noteTop
 			# mid = (lo + hi) / 2
@@ -296,7 +290,6 @@ M = {
 			# 	r: 3
 			# 	fill: color
 			# )
-
 			# enter.append('line').attr(
 			# 	x1: (d) -> x(d.expectedBeats)
 			# 	x2: (d) -> x(d.expectedBeats + d.errorBeats)
@@ -312,6 +305,7 @@ M = {
 			# 	stroke: color
 			# )
 
+			# Filled polygon version of the above
 			# enter.append('polygon').attr(
 			# 	points: (d) -> [
 			# 		x(d.expectedBeats), lo
@@ -320,6 +314,14 @@ M = {
 			# 	].join(',')
 			# 	fill: color
 			# )
+
+			enter.append('line').attr(
+				x1: (d) -> x(d.expectedBeats)
+				x2: (d) -> x(d.expectedBeats + seq.noteSize)
+				y1: (d) -> 30 - d.errorMs / 50
+				y2: (d) -> 30 + d.errorMs / 50
+				stroke: color
+			)
 
 			update.exit().remove()
 
