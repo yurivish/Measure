@@ -14,8 +14,9 @@ do ->
 		'B'
 	]
 
-
-	# MIDI number -> hertz
+	# Pitches for MIDI notes based on standard concert pitch.
+	# http://en.wikipedia.org/wiki/Scientific_pitch_notation
+	# http://en.wikipedia.org/wiki/A440_(pitch_standard)
 	pitches = [
 		16.352 # C0
 		17.324
