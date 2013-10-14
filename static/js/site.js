@@ -267,7 +267,7 @@
   instrument = initInstrument();
 
   _.defer(function() {
-    var height, loadSequence, sequence, vis, width, _ref1;
+    var height, loadSequence, sequence, start, vis, width, _ref1;
     d('Starting');
     vis = d3.select('#piece');
     _ref1 = vis.node().getBoundingClientRect(), width = _ref1.width, height = _ref1.height;
@@ -287,28 +287,106 @@
         {
           from: 0,
           to: 14,
-          text: 'Ascend 2 octaves'
+          text: 'Ascend'
         }, {
           from: 15,
           to: 29,
-          text: 'Descend 2 octaves'
+          text: 'Descend'
         }
       ],
       beatsPerMeasure: 4,
       beatSize: 0.25,
-      noteSize: 0.125
+      noteSize: 0.25
     };
     sequence.beats = Math.ceil(sequence.notes.length * (sequence.noteSize / sequence.beatSize));
     loadSequence = function(seq) {
-      var bpm, pad, sequenceVis, timeVis;
+      var bpm, errorVis, pad, sequenceVis, timeVis;
       pad = 40;
       bpm = 120;
       timeVis = M.time().beats(seq.beats).beatSize(seq.beatSize).noteSize(seq.noteSize).bpm(bpm).width(width).pad(pad).vis(vis);
       timeVis();
       sequenceVis = M.sequence().width(width).pad(pad).bpm(bpm).vis(vis).seq(seq);
-      return sequenceVis();
+      sequenceVis();
+      errorVis = M.error().width(width).pad(pad).bpm(bpm).vis(vis).seq(seq);
+      return start(seq, bpm).on('start', function(played) {
+        return d('start');
+      }).on('update', function(played) {
+        return errorVis.played(played);
+      }).on('end', function() {
+        return d('end');
+      });
     };
-    return loadSequence(sequence);
+    _.defer(function() {
+      return loadSequence(sequence);
+    });
+    return start = function(seq, bpm) {
+      var alreadyPlayed, dispatch, findCorrespondingIndex, noteIndexToBeatTime, noteIndexToTime, played, startTime;
+      dispatch = d3.dispatch('start', 'update', 'end');
+      played = [];
+      alreadyPlayed = {};
+      startTime = null;
+      noteIndexToBeatTime = d3.scale.linear().domain([0, seq.notes.length]).range([0, seq.beats * seq.beatSize]);
+      noteIndexToTime = d3.scale.linear().domain([0, seq.notes.length]).range([0, seq.beats * 1000 * 60 * (1 / bpm)]);
+      instrument.on('keydown.notes', function(e) {
+        var errorBeats, errorMs, expectedBeats, expectedMs, index, note, playedBeats, playedMs, time;
+        if (startTime == null) {
+          startTime = e.time;
+          dispatch.start(played);
+        }
+        time = e.time - startTime;
+        index = findCorrespondingIndex(e.key, time);
+        if (index != null) {
+          alreadyPlayed[index] = true;
+          note = seq.notes[index];
+          expectedMs = noteIndexToTime(note.index);
+          expectedBeats = noteIndexToBeatTime(note.index);
+          playedMs = noteIndexToTime(noteIndexToTime.invert(time));
+          playedBeats = noteIndexToBeatTime(noteIndexToTime.invert(time));
+          errorMs = playedMs - expectedMs;
+          errorBeats = playedBeats - expectedBeats;
+          played.push({
+            key: e.key,
+            expectedMs: expectedMs,
+            expectedBeats: expectedBeats,
+            playedMs: playedMs,
+            playedBeats: playedBeats,
+            errorMs: errorMs,
+            errorBeats: errorBeats
+          });
+        } else {
+          0;
+        }
+        d.apply(null, played);
+        return dispatch.update(played);
+      });
+      findCorrespondingIndex = function(key, time) {
+        var index, note, timeWindow, _i, _len, _ref2;
+        timeWindow = 2000;
+        _ref2 = seq.notes;
+        for (index = _i = 0, _len = _ref2.length; _i < _len; index = ++_i) {
+          note = _ref2[index];
+          if (index in alreadyPlayed) {
+            continue;
+          } else if (note.key === key && Math.abs(noteIndexToTime(index) - time) < timeWindow) {
+            return index;
+          }
+        }
+        return null;
+      };
+      instrument.emulateKeysWithKeyboard(seq.notes.map(function(_arg) {
+        var key;
+        key = _arg.key;
+        return key;
+      }));
+      dispatch.abort = function() {
+        instrument.stopEmulatingKeys();
+        return instrument.on('keydown.notes', null);
+      };
+      _.defer(function() {
+        return dispatch.update(played);
+      });
+      return dispatch;
+    };
   });
 
   M = {
@@ -363,6 +441,57 @@
       };
       return _.accessors(render, opts).addAll().add('vis', createElements).done();
     },
+    error: function() {
+      var createElements, opts, render;
+      opts = {
+        width: 300,
+        pad: 0,
+        bpm: 120,
+        vis: null,
+        seq: null,
+        played: null
+      };
+      createElements = function() {
+        if (opts.vis.select('.error-vis').empty()) {
+          return opts.vis.append('g').attr('class', 'error-vis');
+        }
+      };
+      render = function() {
+        var duration, enter, played, seq, update, x;
+        seq = opts.seq;
+        played = opts.played;
+        duration = seq.beats * seq.beatSize;
+        x = d3.scale.linear().domain([0, duration]).range([opts.pad, opts.width - opts.pad]);
+        update = opts.vis.select('.error-vis').selectAll('.note').data(played);
+        enter = update.enter().append('g').attr('class', 'note');
+        enter.append('rect').attr({
+          x: function(d) {
+            return x(d.expectedBeats) + (d.errorBeats > 0 ? -(x(d.errorBeats) - x(0)) : 0);
+          },
+          y: 15,
+          width: function(d) {
+            return Math.abs(x(d.errorBeats) - x(0));
+          },
+          height: 10,
+          fill: function(d) {
+            if (d.errorBeats < 0) {
+              return '#ff0000';
+            } else {
+              return '#009eff';
+            }
+          },
+          stroke: function(d) {
+            if (d.errorBeats < 0) {
+              return '#ff0000';
+            } else {
+              return '#009eff';
+            }
+          }
+        });
+        return update.exit().remove();
+      };
+      return _.accessors(render, opts).addAll().add('vis', createElements).add('played', render).done();
+    },
     sequence: function() {
       var createElements, opts, render;
       opts = {
@@ -378,7 +507,7 @@
         }
       };
       render = function() {
-        var annKeyLabel, duration, enter, notes, pad, seq, update, x, xAnn, y, yAnn;
+        var annKeyLabel, duration, enter, keyLabelPadding, notes, seq, update, x, xAnn, y, yAnn;
         seq = opts.seq;
         notes = seq.notes;
         duration = seq.beats * seq.beatSize;
@@ -390,9 +519,10 @@
         enter = update.enter().append('g').attr({
           "class": 'note',
           transform: function(d) {
-            return "translate(" + (x(d.index * seq.noteSize)) + ", " + (y()) + ")";
+            return "translate(" + (Math.round(x(d.index * seq.noteSize))) + ", " + (y()) + ")";
           }
         });
+        update.exit().remove();
         enter.append('rect').attr({
           width: 4,
           height: 10,
@@ -416,20 +546,20 @@
               return "translate(" + (xAnn(d, type)) + ", " + (yAnn()) + ")";
             }
           }).text(function(d) {
-            return Theory.nameForKey(notes[d.from].key, true);
+            return Theory.nameForKey(notes[d[type]].key, true);
           }).each(function() {
             return this.parentNode[type + 'Key'] = this;
           });
         };
         annKeyLabel('to');
         annKeyLabel('from');
-        pad = 10;
+        keyLabelPadding = 10;
         enter.append('line').attr({
           x1: function(d) {
-            return xAnn(d, 'from') + this.parentNode.fromKey.getComputedTextLength() + pad;
+            return xAnn(d, 'from') + this.parentNode.fromKey.getComputedTextLength() + keyLabelPadding;
           },
           x2: function(d) {
-            return xAnn(d, 'to') - pad;
+            return xAnn(d, 'to') - keyLabelPadding;
           },
           y1: function(d) {
             return yAnn() - 4;
@@ -441,7 +571,7 @@
         });
         return enter.append('text').attr({
           transform: function(d) {
-            return "translate(" + (x(notes[d.from].index * seq.noteSize) - 2) + ", " + (yAnn() + 20) + ")";
+            return "translate(" + (xAnn(d, 'from')) + ", " + (yAnn() + 20) + ")";
           }
         }).text(function(d) {
           return d.text;
