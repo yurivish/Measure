@@ -84,8 +84,9 @@
   Theory = {};
 
   (function() {
-    var notes;
+    var notes, pitches;
     notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    pitches = [16.352, 17.324, 18.354, 19.445, 20.602, 21.827, 23.125, 24.500, 25.957, 27.500, 29.135, 30.868, 32.703, 34.648, 36.708, 38.891, 41.203, 43.654, 46.249, 48.999, 51.913, 55.000, 58.270, 61.735, 65.406, 69.296, 73.416, 77.782, 82.407, 87.307, 92.499, 97.999, 103.83, 110.00, 116.54, 123.47, 130.81, 138.59, 146.83, 155.56, 164.81, 174.61, 185.00, 196.00, 207.65, 220.00, 233.08, 246.94, 261.63, 277.18, 293.66, 311.13, 329.63, 349.23, 369.99, 392.00, 415.30, 440.00, 466.16, 493.88, 523.25, 554.37, 587.33, 622.25, 659.26, 698.46, 739.99, 783.99, 830.61, 880.00, 932.33, 987.77, 1046.5, 1108.7, 1174.7, 1244.5, 1318.5, 1396.9, 1480.0, 1568.0, 1661.2, 1760.0, 1864.7, 1975.5, 2093.0, 2217.5, 2349.3, 2489.0, 2637.0, 2793.8, 2960.0, 3136.0, 3322.4, 3520.0, 3729.3, 3951.1, 4186.0, 4434.9, 4698.6, 4978.0, 5274.0, 5587.7, 5919.9, 6271.9, 6644.9, 7040.0, 7458.6, 7902.1];
     Theory.major = function(start) {
       var incs, offsets;
       incs = [0, 2, 2, 1, 2, 2, 2];
@@ -102,8 +103,11 @@
         return start + offset;
       });
     };
-    return Theory.nameForKey = function(key, number) {
-      return notes[key % 12] + (number ? '' + Math.floor(key / 12) - 1 : '');
+    Theory.pitchForKey = function(key) {
+      return pitches[key - 12];
+    };
+    return Theory.nameForKey = function(key, withNumber) {
+      return notes[key % 12] + (withNumber ? '' + Math.floor(key / 12) - 1 : '');
     };
   })();
 
@@ -222,22 +226,30 @@
   };
 
   Metronome = (function() {
-    var active, dispatch, gainNode, interval, lookaheadTime, nextNoteTime, playNoteAt, schedule, timeout;
+    var active, dispatch, gainNode, interval, lookaheadTime, nextNoteTime, notes, playNoteAt, schedule, start, timeout, volume;
     dispatch = d3.dispatch('tick');
     audioContext = new AudioContext();
     active = false;
     lookaheadTime = nextNoteTime = interval = null;
     timeout = null;
+    volume = 0.05;
     gainNode = audioContext.createGain();
     gainNode.connect(audioContext.destination);
-    gainNode.gain.value = 0.05;
+    gainNode.gain.value = volume;
+    start = 0;
+    notes = Theory.major(60);
     playNoteAt = function(time) {
-      var osc;
+      var fadeDuration, osc, tickDuration;
       osc = audioContext.createOscillator();
       osc.connect(gainNode);
-      osc.frequency.tick = 660.0;
+      osc.frequency.value = Theory.pitchForKey(notes[start++ % notes.length]);
+      tickDuration = 1 / 10;
+      fadeDuration = 1 / 1000;
+      gainNode.gain.setValueAtTime(0, time);
+      gainNode.gain.linearRampToValueAtTime(volume, time + fadeDuration);
+      gainNode.gain.linearRampToValueAtTime(0.0, time + tickDuration - fadeDuration);
       osc.noteOn(time);
-      return osc.noteOff(time + 0.1);
+      return osc.noteOff(time + tickDuration);
     };
     schedule = function() {
       while (nextNoteTime <= audioContext.currentTime + lookaheadTime) {
@@ -311,7 +323,7 @@
       errorVis = M.error().width(width).pad(pad).bpm(bpm).vis(vis.append('g').attr('class', 'error-vis')).seq(seq);
       sequenceVis = M.sequence().width(width).pad(pad).bpm(bpm).vis(vis.append('g').attr('class', 'seq-vis')).seq(seq);
       sequenceVis();
-      return start(seq, bpm).on('start', function(played) {
+      return start(seq, bpm).on('start', function() {
         return Metronome.start(120);
       }).on('update', function(played) {
         return errorVis.played(played);
@@ -323,18 +335,26 @@
       return loadSequence(sequence);
     });
     return start = function(seq, bpm) {
-      var alreadyPlayed, dispatch, findCorrespondingIndex, noteIndexToBeatTime, noteIndexToTime, played, startTime;
+      var alreadyPlayed, checkForEnd, dispatch, findCorrespondingIndex, noteIndexToBeatTime, noteIndexToTime, played, startTime;
       dispatch = d3.dispatch('start', 'update', 'end');
       played = [];
       alreadyPlayed = {};
       noteIndexToBeatTime = d3.scale.linear().domain([0, seq.notes.length]).range([0, seq.notes.length * seq.noteSize]);
       noteIndexToTime = d3.scale.linear().domain([0, seq.notes.length]).range([0, (1 / bpm) * 60 * 1000 * seq.notes.length * seq.noteSize / seq.beatSize]);
       startTime = null;
+      checkForEnd = null;
       instrument.on('keydown.notes', function(e) {
-        var errorBeats, errorMs, expectedBeats, expectedMs, index, note, playedBeats, playedMs, time;
+        var errorBeats, errorMs, expectedBeats, expectedMs, index, note, playedBeats, playedMs, startDateTime, time;
         if (startTime == null) {
+          dispatch.start();
           startTime = e.time;
-          dispatch.start(played);
+          startDateTime = Date.now();
+          checkForEnd = setInterval(function() {
+            if (noteIndexToTime.invert(Date.now() - startDateTime) > seq.notes.length - 1) {
+              dispatch.abort();
+              return dispatch.end();
+            }
+          }, 250);
         }
         time = e.time - startTime;
         index = findCorrespondingIndex(e.key, time);
@@ -384,7 +404,8 @@
       }));
       dispatch.abort = function() {
         instrument.stopEmulatingKeys();
-        return instrument.on('keydown.notes', null);
+        instrument.on('keydown.notes', null);
+        return clearInterval(checkForEnd);
       };
       _.defer(function() {
         return dispatch.update(played);

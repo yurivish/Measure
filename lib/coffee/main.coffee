@@ -61,12 +61,13 @@ _.defer ->
 		sequenceVis()
 
 		start(seq, bpm)
-			.on('start', (played) ->
+			.on('start', ->
 				# NOTE: Is this slightly out of sync because we didn't compensate
 				# for the time take to get to this line of code?
 				Metronome.start(120)
-			).on('update', (played) -> errorVis.played(played))
-			.on('end', -> 
+			).on('update', (played) ->
+				errorVis.played(played))
+			.on('end', ->
 				Metronome.stop()
 			)
 
@@ -87,11 +88,19 @@ _.defer ->
 			.domain([0, seq.notes.length])	
 			.range([0, (1 / bpm) * 60 * 1000 * seq.notes.length * seq.noteSize / seq.beatSize ]) #seq.beats * 1000 * 60 * (1 / bpm)])
 
-		startTime = null # Determined from the first keydown event
+		startTime  = null # Determined from the first keydown event
+		checkForEnd = null
 		instrument.on 'keydown.notes', (e) ->
 			unless startTime?
+				dispatch.start()
 				startTime = e.time
-				dispatch.start(played)
+				startDateTime = Date.now()
+
+				checkForEnd = setInterval ->
+					if noteIndexToTime.invert(Date.now() - startDateTime) > seq.notes.length - 1
+						dispatch.abort()
+						dispatch.end()
+				, 250
 
 			time = e.time - startTime
 			index = findCorrespondingIndex e.key, time
@@ -143,12 +152,11 @@ _.defer ->
 		# To filter rests: .filter((note) -> note.key?)
 		instrument.emulateKeysWithKeyboard seq.notes.map ({key}) -> key
 
-		# Expose an abort method to ends the piece early.
 		dispatch.abort = ->
 			instrument.stopEmulatingKeys()
 			instrument.on('keydown.notes', null)
-			# clearTimeout endTimeout
-
+			clearInterval checkForEnd
+			
 		_.defer -> dispatch.update(played)
 		dispatch
 
