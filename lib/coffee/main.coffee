@@ -15,7 +15,8 @@ _.defer ->
 			Theory.major(60)
 			Theory.major(72)
 			72 + 12 # Top C
-			72 + 12
+			null 		# Rest
+			72 + 12 # Top C
 			Theory.major(72).reverse()
 			Theory.major(60).reverse()
 		]).map (key, index) -> {
@@ -25,12 +26,12 @@ _.defer ->
 
 		annotations: [
 			{ from: 0,  to: 14, text: 'Ascend'}
-			{ from: 15, to: 29, text: 'Descend'}
+			{ from: 16, to: 30, text: 'Descend'}
 		]
 
 		beatsPerMeasure: 4 		# Numerator of time signature
 		beatSize: 0.25 			# Denominator of time signature
-		noteSize: 0.125			# Indirectly specifies the number of notes in a beat
+		noteSize: 0.25			# Indirectly specifies the number of notes in a beat
 	}
 	sequence.beats = Math.ceil sequence.notes.length * (sequence.noteSize / sequence.beatSize)
 
@@ -64,7 +65,6 @@ _.defer ->
 
 		sequenceVis()
 
-
 		start(seq, bpm)
 			.on('start', (played) -> d 'start')
 			.on('update', (played) -> errorVis.played(played))
@@ -85,7 +85,7 @@ _.defer ->
 
 		noteIndexToTime = d3.scale.linear()
 			.domain([0, seq.notes.length])	
-			.range([0, (1 / bpm) * 60 * 1000 * seq.notes.length]) #seq.beats * 1000 * 60 * (1 / bpm)])
+			.range([0, (1 / bpm) * 60 * 1000 * seq.notes.length * seq.noteSize / seq.beatSize ]) #seq.beats * 1000 * 60 * (1 / bpm)])
 
 		startTime = null # Determined from the first keydown event
 		instrument.on 'keydown.notes', (e) ->
@@ -136,10 +136,11 @@ _.defer ->
 				if note.index of alreadyPlayed
 					continue
 				else if note.key == key and Math.abs(noteIndexToTime(note.index) - time) < timeWindow
+					d noteIndexToTime(note.index)
 					return note.index
 			return null
 
-		instrument.emulateKeysWithKeyboard seq.notes.map ({key}) -> key
+		instrument.emulateKeysWithKeyboard seq.notes.filter((note) -> note.key?).map ({key}) -> key
 
 		# TODO: End!
 
@@ -160,9 +161,10 @@ _.defer ->
 		dispatch
 
 M = {
-	noteTop: 60 # 35
+	noteTop: 45 # 35
 	noteHeight: 15
-
+	minorTickSize: 7
+	majorTickSize: 14
 	time: ->
 		opts = {
 			width: 300
@@ -180,14 +182,14 @@ M = {
 		major = d3.svg.axis()
 			.scale(x)
 			.orient('bottom')
-			.tickSize(14)
+			.tickSize(M.majorTickSize)
 
 		# One minor tick per note
 		minor = d3.svg.axis()
 			.scale(x)
 			.orient('bottom')
 			.outerTickSize(0)
-			.innerTickSize(7)
+			.innerTickSize(M.minorTickSize)
 
 		render = ->
 			# Scale from beat time to horizontal space
@@ -246,9 +248,7 @@ M = {
 
 			# Scale from beat time to horizontal space
 			duration = seq.beats * seq.beatSize
-			x
-				.domain([0, duration])
-				.range([opts.pad, opts.width - opts.pad])
+			x.domain([0, duration]).range([opts.pad, opts.width - opts.pad])
 
 			update = opts.vis.selectAll('.note').data(played)
 			enter = update.enter().append('g').attr('class', 'note')
@@ -259,18 +259,19 @@ M = {
 				# y: M.noteTop
 				# height: M.noteHeight
 				y: 0
-				height: 14
+				height: M.majorTickSize
 				width: (d) -> Math.max 1, Math.abs x(d.errorBeats) - x(0)
 				stroke: colorThreshold
 				fill: colorThreshold
 			)
 			
 			# NOTE: Can stack up all the wiggly lines and make a 'boquet'
+			mid = (M.majorTickSize + M.noteTop) / 2
 			enter.append('path').attr(
 				d: (d) -> line([
-					{ x: x(d.expectedBeats), y: 30 - d.errorMs / 5 } # / 5?	
-					{ x: x(d.expectedBeats + seq.noteSize) - (x(d.expectedBeats + seq.noteSize) - x(d.expectedBeats)) / 2, y: 30 }
-					{ x: x(d.expectedBeats + seq.noteSize), y: 30 }
+					{ x: x(d.expectedBeats), y: mid - d.errorMs / 5 }
+					{ x: x(d.expectedBeats + seq.noteSize) - (x(d.expectedBeats + seq.noteSize) - x(d.expectedBeats)) / 2, y: mid }
+					{ x: x(d.expectedBeats + seq.noteSize), y: mid }
 				])
 				stroke: colorGrad
 				fill: 'transparent'
@@ -313,8 +314,8 @@ M = {
 			enter.append('rect').attr(
 				width: 4
 				height: M.noteHeight
-				fill: '#fff'
-				stroke: '#fff' # Align with the time markings
+				fill: (d) -> if d.key then '#fff' else '#666'
+				stroke: (d) -> if d.key then '#fff' else '#666' # Align with the time markings
 			)
 
 			# Annotations

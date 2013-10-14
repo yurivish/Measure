@@ -277,7 +277,7 @@
       height: height + 150
     });
     sequence = {
-      notes: _.flatten([Theory.major(60), Theory.major(72), 72 + 12, 72 + 12, Theory.major(72).reverse(), Theory.major(60).reverse()]).map(function(key, index) {
+      notes: _.flatten([Theory.major(60), Theory.major(72), 72 + 12, null, 72 + 12, Theory.major(72).reverse(), Theory.major(60).reverse()]).map(function(key, index) {
         return {
           key: key,
           index: index
@@ -289,14 +289,14 @@
           to: 14,
           text: 'Ascend'
         }, {
-          from: 15,
-          to: 29,
+          from: 16,
+          to: 30,
           text: 'Descend'
         }
       ],
       beatsPerMeasure: 4,
       beatSize: 0.25,
-      noteSize: 0.125
+      noteSize: 0.25
     };
     sequence.beats = Math.ceil(sequence.notes.length * (sequence.noteSize / sequence.beatSize));
     loadSequence = function(seq) {
@@ -325,7 +325,7 @@
       played = [];
       alreadyPlayed = {};
       noteIndexToBeatTime = d3.scale.linear().domain([0, seq.notes.length]).range([0, seq.notes.length * seq.noteSize]);
-      noteIndexToTime = d3.scale.linear().domain([0, seq.notes.length]).range([0, (1 / bpm) * 60 * 1000 * seq.notes.length]);
+      noteIndexToTime = d3.scale.linear().domain([0, seq.notes.length]).range([0, (1 / bpm) * 60 * 1000 * seq.notes.length * seq.noteSize / seq.beatSize]);
       startTime = null;
       instrument.on('keydown.notes', function(e) {
         var errorBeats, errorMs, expectedBeats, expectedMs, index, note, playedBeats, playedMs, time;
@@ -368,12 +368,15 @@
           if (note.index in alreadyPlayed) {
             continue;
           } else if (note.key === key && Math.abs(noteIndexToTime(note.index) - time) < timeWindow) {
+            d(noteIndexToTime(note.index));
             return note.index;
           }
         }
         return null;
       };
-      instrument.emulateKeysWithKeyboard(seq.notes.map(function(_arg) {
+      instrument.emulateKeysWithKeyboard(seq.notes.filter(function(note) {
+        return note.key != null;
+      }).map(function(_arg) {
         var key;
         key = _arg.key;
         return key;
@@ -390,8 +393,10 @@
   });
 
   M = {
-    noteTop: 60,
+    noteTop: 45,
     noteHeight: 15,
+    minorTickSize: 7,
+    majorTickSize: 14,
     time: function() {
       var major, minor, opts, render, x;
       opts = {
@@ -404,8 +409,8 @@
         vis: null
       };
       x = d3.scale.linear();
-      major = d3.svg.axis().scale(x).orient('bottom').tickSize(14);
-      minor = d3.svg.axis().scale(x).orient('bottom').outerTickSize(0).innerTickSize(7);
+      major = d3.svg.axis().scale(x).orient('bottom').tickSize(M.majorTickSize);
+      minor = d3.svg.axis().scale(x).orient('bottom').outerTickSize(0).innerTickSize(M.minorTickSize);
       render = function() {
         var duration, n, vis;
         duration = opts.beats * opts.beatSize;
@@ -463,7 +468,7 @@
         return d.y;
       }).interpolate('cardinal').tension(.4);
       render = function() {
-        var duration, enter, played, seq, update;
+        var duration, enter, mid, played, seq, update;
         seq = opts.seq;
         played = opts.played;
         duration = seq.beats * seq.beatSize;
@@ -475,25 +480,26 @@
             return Math.round(x(d.expectedBeats + d.errorBeats) + (d.errorBeats > 0 ? -(x(d.errorBeats) - x(0)) : 0));
           },
           y: 0,
-          height: 14,
+          height: M.majorTickSize,
           width: function(d) {
             return Math.max(1, Math.abs(x(d.errorBeats) - x(0)));
           },
           stroke: colorThreshold,
           fill: colorThreshold
         });
+        mid = (M.majorTickSize + M.noteTop) / 2;
         enter.append('path').attr({
           d: function(d) {
             return line([
               {
                 x: x(d.expectedBeats),
-                y: 30 - d.errorMs / 5
+                y: mid - d.errorMs / 5
               }, {
                 x: x(d.expectedBeats + seq.noteSize) - (x(d.expectedBeats + seq.noteSize) - x(d.expectedBeats)) / 2,
-                y: 30
+                y: mid
               }, {
                 x: x(d.expectedBeats + seq.noteSize),
-                y: 30
+                y: mid
               }
             ]);
           },
@@ -533,8 +539,20 @@
         enter.append('rect').attr({
           width: 4,
           height: M.noteHeight,
-          fill: '#fff',
-          stroke: '#fff'
+          fill: function(d) {
+            if (d.key) {
+              return '#fff';
+            } else {
+              return '#666';
+            }
+          },
+          stroke: function(d) {
+            if (d.key) {
+              return '#fff';
+            } else {
+              return '#666';
+            }
+          }
         });
         update = opts.vis.selectAll('.annotation').data(seq.annotations);
         enter = update.enter().append('g').attr({
