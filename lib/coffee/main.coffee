@@ -44,7 +44,7 @@ _.defer ->
 			.bpm(bpm)
 			.width(width)
 			.pad(pad)
-			.vis(vis)
+			.vis(vis.append('g').attr('class', 'time-vis'))
 
 		timeVis()
 
@@ -52,7 +52,7 @@ _.defer ->
 			.width(width)
 			.pad(pad)
 			.bpm(bpm)
-			.vis(vis)
+			.vis(vis.append('g').attr('class', 'seq-vis'))
 			.seq(seq)
 
 		sequenceVis()
@@ -61,7 +61,7 @@ _.defer ->
 			.width(width)
 			.pad(pad)
 			.bpm(bpm)
-			.vis(vis)
+			.vis(vis.append('g').attr('class', 'error-vis'))
 			.seq(seq)
 
 		start(seq, bpm)
@@ -172,10 +172,9 @@ M = {
 		# TODO:Create the parent elements beforehand; pass them into vis. Only create internal elements here.
 		# Enables setting translations easily from outside.
 		createElements = ->
-			if opts.vis.select('.time-vis').empty()
-				parent = opts.vis.append('g').attr(class: 'time-vis')
-				parent.append('g').attr(class: 'axis major')
-				parent.append('g').attr(class: 'axis minor')
+			if opts.vis.select('.axis.major').empty()
+				opts.vis.append('g').attr(class: 'axis major')
+				opts.vis.append('g').attr(class: 'axis minor')
 
 		render = ->
 			# Scale from beat time to horizontal space
@@ -199,9 +198,8 @@ M = {
 				.outerTickSize(0)
 				.innerTickSize(7)
 
-			parent = opts.vis.select('.time-vis')
-			parent.select('.axis.major').call(major)
-			parent.select('.axis.minor').call(minor)
+			opts.vis.select('.axis.major').call(major)
+			opts.vis.select('.axis.minor').call(minor)
 
 		_.accessors(render, opts)
 			.addAll()
@@ -218,10 +216,6 @@ M = {
 			played: null
 		}
 
-		createElements = ->
-			if opts.vis.select('.error-vis').empty()
-				opts.vis.append('g').attr('class', 'error-vis')
-
 		render = ->
 			seq = opts.seq
 			played = opts.played
@@ -236,7 +230,7 @@ M = {
 			# playedMs, playedBeats
 			# errorMs, errorBeats
 
-			update = opts.vis.select('.error-vis').selectAll('.note').data(played)
+			update = opts.vis.selectAll('.note').data(played)
 			enter = update.enter().append('g').attr('class', 'note')
 			enter.append('rect').attr(
 				x: (d) -> x(d.expectedBeats) + if d.errorBeats > 0 then -(x(d.errorBeats) - x(0)) else 0
@@ -249,7 +243,6 @@ M = {
 			update.exit().remove()
 
 		_.accessors(render, opts).addAll()
-			.add('vis', createElements)
 			.add('played', render)
 			.done()
 
@@ -261,10 +254,6 @@ M = {
 			vis: null
 			seq: null
 		}
-
-		createElements = ->
-			if opts.vis.select('.seq-vis').empty()
-				opts.vis.append('g').attr('class', 'seq-vis')
 
 		render = ->
 			seq = opts.seq
@@ -278,7 +267,7 @@ M = {
 
 			y = -> 35
 
-			update = opts.vis.select('.seq-vis').selectAll('.note').data(notes)
+			update = opts.vis.selectAll('.note').data(notes)
 			enter = update.enter().append('g').attr(
 				class: 'note'
 				transform: (d) -> "translate(#{Math.round x(d.index * seq.noteSize)}, #{y()})"
@@ -293,7 +282,7 @@ M = {
 			)
 
 			# Annotations
-			update = opts.vis.select('.seq-vis').selectAll('.annotation').data(seq.annotations)
+			update = opts.vis.selectAll('.annotation').data(seq.annotations)
 			enter = update.enter().append('g').attr(
 				class: 'annotation'
 			)
@@ -327,7 +316,6 @@ M = {
 			).text((d) -> d.text)
 
 		_.accessors(render, opts).addAll()
-			.add('vis', createElements)
 			.add('seq', render)
 			.done()
 

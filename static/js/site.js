@@ -303,11 +303,11 @@
       var bpm, errorVis, pad, sequenceVis, timeVis;
       pad = 40;
       bpm = 120;
-      timeVis = M.time().beats(seq.beats).beatSize(seq.beatSize).noteSize(seq.noteSize).bpm(bpm).width(width).pad(pad).vis(vis);
+      timeVis = M.time().beats(seq.beats).beatSize(seq.beatSize).noteSize(seq.noteSize).bpm(bpm).width(width).pad(pad).vis(vis.append('g').attr('class', 'time-vis'));
       timeVis();
-      sequenceVis = M.sequence().width(width).pad(pad).bpm(bpm).vis(vis).seq(seq);
+      sequenceVis = M.sequence().width(width).pad(pad).bpm(bpm).vis(vis.append('g').attr('class', 'seq-vis')).seq(seq);
       sequenceVis();
-      errorVis = M.error().width(width).pad(pad).bpm(bpm).vis(vis).seq(seq);
+      errorVis = M.error().width(width).pad(pad).bpm(bpm).vis(vis.append('g').attr('class', 'error-vis')).seq(seq);
       return start(seq, bpm).on('start', function(played) {
         return d('start');
       }).on('update', function(played) {
@@ -402,21 +402,17 @@
         vis: null
       };
       createElements = function() {
-        var parent;
-        if (opts.vis.select('.time-vis').empty()) {
-          parent = opts.vis.append('g').attr({
-            "class": 'time-vis'
-          });
-          parent.append('g').attr({
+        if (opts.vis.select('.axis.major').empty()) {
+          opts.vis.append('g').attr({
             "class": 'axis major'
           });
-          return parent.append('g').attr({
+          return opts.vis.append('g').attr({
             "class": 'axis minor'
           });
         }
       };
       render = function() {
-        var duration, major, minor, n, parent, x;
+        var duration, major, minor, n, x;
         duration = opts.beats * opts.beatSize;
         x = d3.scale.linear().domain([0, duration]).range([opts.pad, opts.width - opts.pad]);
         major = d3.svg.axis().scale(x).orient('bottom').tickValues((function() {
@@ -435,14 +431,13 @@
           }
           return _results;
         })()).outerTickSize(0).innerTickSize(7);
-        parent = opts.vis.select('.time-vis');
-        parent.select('.axis.major').call(major);
-        return parent.select('.axis.minor').call(minor);
+        opts.vis.select('.axis.major').call(major);
+        return opts.vis.select('.axis.minor').call(minor);
       };
       return _.accessors(render, opts).addAll().add('vis', createElements).done();
     },
     error: function() {
-      var createElements, opts, render;
+      var opts, render;
       opts = {
         width: 300,
         pad: 0,
@@ -451,18 +446,13 @@
         seq: null,
         played: null
       };
-      createElements = function() {
-        if (opts.vis.select('.error-vis').empty()) {
-          return opts.vis.append('g').attr('class', 'error-vis');
-        }
-      };
       render = function() {
         var duration, enter, played, seq, update, x;
         seq = opts.seq;
         played = opts.played;
         duration = seq.beats * seq.beatSize;
         x = d3.scale.linear().domain([0, duration]).range([opts.pad, opts.width - opts.pad]);
-        update = opts.vis.select('.error-vis').selectAll('.note').data(played);
+        update = opts.vis.selectAll('.note').data(played);
         enter = update.enter().append('g').attr('class', 'note');
         enter.append('rect').attr({
           x: function(d) {
@@ -490,21 +480,16 @@
         });
         return update.exit().remove();
       };
-      return _.accessors(render, opts).addAll().add('vis', createElements).add('played', render).done();
+      return _.accessors(render, opts).addAll().add('played', render).done();
     },
     sequence: function() {
-      var createElements, opts, render;
+      var opts, render;
       opts = {
         width: 300,
         pad: 0,
         bpm: 120,
         vis: null,
         seq: null
-      };
-      createElements = function() {
-        if (opts.vis.select('.seq-vis').empty()) {
-          return opts.vis.append('g').attr('class', 'seq-vis');
-        }
       };
       render = function() {
         var annKeyLabel, duration, enter, keyLabelPadding, notes, seq, update, x, xAnn, y, yAnn;
@@ -515,7 +500,7 @@
         y = function() {
           return 35;
         };
-        update = opts.vis.select('.seq-vis').selectAll('.note').data(notes);
+        update = opts.vis.selectAll('.note').data(notes);
         enter = update.enter().append('g').attr({
           "class": 'note',
           transform: function(d) {
@@ -529,7 +514,7 @@
           fill: '#fff',
           stroke: '#fff'
         });
-        update = opts.vis.select('.seq-vis').selectAll('.annotation').data(seq.annotations);
+        update = opts.vis.selectAll('.annotation').data(seq.annotations);
         enter = update.enter().append('g').attr({
           "class": 'annotation'
         });
@@ -577,7 +562,7 @@
           return d.text;
         });
       };
-      return _.accessors(render, opts).addAll().add('vis', createElements).add('seq', render).done();
+      return _.accessors(render, opts).addAll().add('seq', render).done();
     }
   };
 
