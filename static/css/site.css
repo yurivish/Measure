@@ -22,9 +22,11 @@ h1,h2{font-size:36px;line-height:36px}
 #page #control-bar .main .play circle:hover + polygon,#page #control-bar .main .play circle:hover + rect{fill:#fff}
 #page #control-bar .main .play circle:active{stroke:#999;fill:#000}
 #page #control-bar .main .play polygon,#page #control-bar .main .play rect{fill:#eee;pointer-events:none}
-#page #exercise text.name,#page #exercise text.instruction{font-size:12px}
-#page #exercise .axis text{font:10px sans-serif;display:none}
-#page #exercise .axis .domain{display:none}
-#page #exercise .axis line,#page #exercise .axis path{fill:none;stroke:#555;shape-rendering:crispEdges}
-#page #exercise .axis.major line,#page #exercise .axis.major path{stroke:#555;stroke-width:1}
+#page #piece text.name,#page #piece text.instruction{font-size:12px}
+#page #piece .seq-vis rect{shape-rendering:crispEdges}
+#page #piece .seq-vis .annotation{font-size:12px}
+#page #piece .axis text{font:10px sans-serif;display:none}
+#page #piece .axis .domain{display:none}
+#page #piece .axis line,#page #piece .axis path{fill:none;stroke:#555;shape-rendering:crispEdges}
+#page #piece .axis.major line,#page #piece .axis.major path{stroke:#555;stroke-width:1}
 
