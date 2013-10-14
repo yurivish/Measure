@@ -169,13 +169,6 @@ M = {
 			vis: null
 		}
 
-		# TODO:Create the parent elements beforehand; pass them into vis. Only create internal elements here.
-		# Enables setting translations easily from outside.
-		createElements = ->
-			if opts.vis.select('.axis.major').empty()
-				opts.vis.append('g').attr(class: 'axis major')
-				opts.vis.append('g').attr(class: 'axis minor')
-
 		render = ->
 			# Scale from beat time to horizontal space
 			duration = opts.beats * opts.beatSize
@@ -198,12 +191,16 @@ M = {
 				.outerTickSize(0)
 				.innerTickSize(7)
 
+			# Create axis parent elements if they don't exist
+			if opts.vis.select('.axis.major').empty()
+				opts.vis.append('g').attr(class: 'axis major')
+				opts.vis.append('g').attr(class: 'axis minor')
+
 			opts.vis.select('.axis.major').call(major)
 			opts.vis.select('.axis.minor').call(minor)
 
 		_.accessors(render, opts)
 			.addAll()
-			.add('vis', createElements)
 			.done()
 
 	error: ->

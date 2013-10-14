@@ -391,7 +391,7 @@
 
   M = {
     time: function() {
-      var createElements, opts, render;
+      var opts, render;
       opts = {
         width: 300,
         pad: 0,
@@ -400,16 +400,6 @@
         noteSize: 0.25,
         bpm: 120,
         vis: null
-      };
-      createElements = function() {
-        if (opts.vis.select('.axis.major').empty()) {
-          opts.vis.append('g').attr({
-            "class": 'axis major'
-          });
-          return opts.vis.append('g').attr({
-            "class": 'axis minor'
-          });
-        }
       };
       render = function() {
         var duration, major, minor, n, x;
@@ -431,10 +421,18 @@
           }
           return _results;
         })()).outerTickSize(0).innerTickSize(7);
+        if (opts.vis.select('.axis.major').empty()) {
+          opts.vis.append('g').attr({
+            "class": 'axis major'
+          });
+          opts.vis.append('g').attr({
+            "class": 'axis minor'
+          });
+        }
         opts.vis.select('.axis.major').call(major);
         return opts.vis.select('.axis.minor').call(minor);
       };
-      return _.accessors(render, opts).addAll().add('vis', createElements).done();
+      return _.accessors(render, opts).addAll().done();
     },
     error: function() {
       var opts, render;
