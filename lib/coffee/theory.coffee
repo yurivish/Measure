@@ -17,4 +17,4 @@ do ->
 		offsets.map (offset) -> start + offset
 
 	Theory.noteNameForKey = (key, number) -> notes[key % 12] + if number then '' + Math.floor(key/12) - 1 else ''
-	Theory.timeBetweenNotes = (bpm, noteSize) -> noteSize * 1000 / (bpm / 60)
+	Theory.timeBetweenNotes = (bpm, notesPerBeat) -> 1000 / (bpm / 60) / notesPerBeat

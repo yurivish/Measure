@@ -1,6 +1,27 @@
 instrument = initInstrument()
 
 
+###
+
+	Exercise: List of notes
+
+	Note:
+		- Key
+		- Time (normalized)
+
+
+	Time visualization: Visualize beat and note times
+		Input: Exercise, BPM, beatSize, noteSize
+		Output: A major tick for each beat, and a minor tick for each note
+
+	Exercise visualization: Visualize notes and their errors
+
+
+	--
+
+
+###
+
 _.defer ->
 	d 'Starting'
 
@@ -14,12 +35,14 @@ _.defer ->
 	]).map (key, index, arr) -> {
 		key
 		time: index # Time starts at zero and is incremented every beat.
-		degree: if index < arr.length/2 then index else (arr.length - index) - 1
 		hand: 'left'
 	}
 
 	bpm = 120
-	noteDuration = 1 # Whole notes
+
+	beatsPerMeasure = 4
+	beatSize = 0.25
+	noteSize = 0.0625
 
 	vis = d3.select('#exercise')
 
@@ -29,59 +52,59 @@ _.defer ->
 	vis.attr({ width, height: height + 150 })
 
 	pad = 40
-	metronomeVis = M.metronome()
+	metronomeVis = M.time()
+		.beats(Math.ceil exercise.length * (noteSize / beatSize))
+		.beatSize(beatSize)
+		.noteSize(noteSize)
 		.width(width)
 		.pad(pad)
-		.beats(exercise.length)
-		.bpm(bpm)
 		.vis(vis)
 
 	metronomeVis()
 
-	exerciseVis = M.exercise()
-		.width(width)
-		.height(height)
-		.pad(pad)
-		.bpm(bpm)
-		.noteDuration(noteDuration)
-		.vis(vis.append('g').attr('transform', 'translate(0, 100)'))
+	# exerciseVis = M.exercise()
+	# 	.width(width)
+	# 	.height(height)
+	# 	.pad(pad)
+	# 	.bpm(bpm)
+	# 	.noteSize(noteSize)
+	# 	.vis(vis.append('g').attr('transform', 'translate(0, 100)'))
 
-	ex = null
-	stop = ->
-		Metronome.stop() # BUG: seems to stop before the last note is played, sometimes?
-		exerciseVis.stopTimeline()
-		ex.abort()
+	# ex = null
+	# stop = ->
+	# 	Metronome.stop() # BUG: seems to stop before the last note is played, sometimes?
+	# 	exerciseVis.stopTimeline()
+	# 	ex.abort()
 
-	arm = ->
-		ex = start(exercise, bpm, noteDuration)
-			.on('start', (notes) ->
-				exerciseVis.startTimeline(notes[notes.length - 1].expectedAt)
-				Metronome.start(bpm)
-			).on('update', (notes) -> exerciseVis.notes(notes))
-			.on('complete', (notes) ->
-				stop()
-				d 'Complete.'
-			)
-	arm()
+	# arm = ->
+	# 	ex = start(exercise, bpm, notesPerBeat)
+	# 		.on('start', (notes) ->
+	# 			exerciseVis.startTimeline(notes[notes.length - 1].expectedAt)
+	# 			Metronome.start(bpm)
+	# 		).on('update', (notes) -> exerciseVis.notes(notes))
+	# 		.on('complete', (notes) ->
+	# 			stop()
+	# 			d 'Complete.'
+	# 		)
+	# arm()
 
-	key 'a', ->
-		stop()
+	# key 'a', ->
+	# 	stop()
 
-	key 'r', ->
-		stop()
-		arm()
+	# key 'r', ->
+	# 	stop()
+	# 	arm()
 
 	# # NOTE: We'll want to record incomplete sessions and aborts, too.
 	# And visits to the site.
 
-start = (notes, bpm, noteDuration) ->
+start = (notes, bpm, notesPerBeat) ->
 	dispatch = d3.dispatch 'start', 'update', 'complete'
 
 	# Session data for this instantiation of the notes
 	data = notes.map (note) -> {
 		key: note.key
-		degree: note.degree
-		expectedAt: note.time * Theory.timeBetweenNotes(bpm, noteDuration)
+		expectedAt: note.time * Theory.timeBetweenNotes(bpm, notesPerBeat)
 		playedAt: null
 		name: Theory.noteNameForKey note.key, true
 	}
@@ -127,12 +150,12 @@ start = (notes, bpm, noteDuration) ->
 
 	# End the exercise once the amount of time that it takes has elapsed
 	# BUG: Ends early...
-	duration = (notes[notes.length - 1].time) * Theory.timeBetweenNotes(bpm, noteDuration)
+	duration = noteSize * exercise.length
 	endTimeout = setTimeout ->
 		dispatch.complete(data)
-	, duration * 2 # BUG: Double to compensate for wrong timing
+	, duration * 2 # BUG: Double to compensate for wrong timing ???
 
-	# Expose an abort method, which ends the exercise early.
+	# Expose an abort method to ends the exercise early.
 	dispatch.abort = ->
 		instrument.stopEmulatingKeys()
 		instrument.on('keydown.notes', null)
@@ -142,82 +165,45 @@ start = (notes, bpm, noteDuration) ->
 	dispatch
 
 M = {
-	metronome: ->
+	time: ->
 		opts = {
-			beats: 50
+			beats: 10
+			beatSize: 1
+			noteSize: 1
 			width: 300
 			pad: 0
-			bpm: 120
 			vis: null
 		}
 
 		createElements = ->
-			if opts.vis.select('.metronome').empty()
-				nome = opts.vis.append('g').attr(class: 'metronome')
-				nome.append('g').attr(class: 'axis major')
-				nome.append('g').attr(class: 'axis minor')
+			if opts.vis.select('.time-vis').empty()
+				parent = opts.vis.append('g').attr(class: 'time-vis')
+				parent.append('g').attr(class: 'axis major')
+				parent.append('g').attr(class: 'axis minor')
 
 		render = ->
-			beats = [ ]
-			majors = [ ]
-			minors = [ ]
-			for num in [0...opts.beats]
-				# NOTE: Notes and beats are not one-to-one.
-				# TODO: Should have real text or perhaps just the first and last have timing info
-				beats.push { num } 
-				majors.push num
-				unless num == opts.beats - 1
-					minors.push num + 0.25
-					minors.push num + 0.5
-					minors.push num + 0.75
-
-			beatRadius = (d, i) ->  if i % 4 then 2 else 6
+			duration = opts.beats * opts.beatSize
 
 			x = d3.scale.linear()
-				.domain([0, opts.beats - 1])
+				.domain([0, duration])
 				.range([opts.pad, opts.width - opts.pad])
 
 			major = d3.svg.axis()
 				.scale(x)
 				.orient('bottom')
-				.tickValues(majors)
+				.tickValues(n for n in [0..duration / opts.beatSize] by opts.beatSize)
 				.tickSize(14)
 
 			minor = d3.svg.axis()
 				.scale(x)
 				.orient('bottom')
-				.tickValues(minors)
+				.tickValues(n for n in [0..duration / opts.noteSize] by opts.noteSize)
 				.outerTickSize(0)
 				.innerTickSize(7)
 
-			nome = opts.vis.select('.metronome')
-			nome.select('.axis.major').call(major)
-			nome.select('.axis.minor').call(minor)
-
-			# update = nome.selectAll('.beat').data(beats)
-			# enter = update.enter().append('g').attr(
-			# 	class: 'beat'
-			# 	transform: (d) -> "translate(#{x(d.num)}, 25)" # TODO: - beatRadius(d, i)
-			# 	opacity: 1e-6
-			# )
-			# enter.append('circle').attr(
-			# 	r: beatRadius
-			# 	fill: '#999'
-			# )
-			# # enter.append('text').attr(
-			# # 	y: 30
-			# # 	fill: '#999'
-			# # ).text((d) -> d.text)
-
-			# update.transition()
-			# 	.delay((d, i) -> i * 10)
-			# 	.duration(500)
-			# 	.ease('ease-out-expo')
-			# 	.attr({
-			# 		opacity: 1
-
-			# 	})
-			# update.exit().remove()
+			parent = opts.vis.select('.time-vis')
+			parent.select('.axis.major').call(major)
+			parent.select('.axis.minor').call(minor)
 
 		_.accessors(render, opts)
 			.addAll()
@@ -230,7 +216,7 @@ M = {
 			height: 300
 			pad: 0
 			bpm: 120
-			noteDuration: 1
+			noteSize: 0.25
 			notes: [ ]
 			vis: null
 		}
@@ -268,7 +254,7 @@ M = {
 			update = notes.selectAll('.note').data(data)
 			enter = update.enter().append('g').attr(
 				class: 'note'
-				transform: (d) -> "translate(#{x(d.expectedAt ? d.playedAt)}, #{y(d.degree)})"
+				transform: (d) -> "translate(#{x(d.expectedAt ? d.playedAt)}, #{y(d.key)})"
 			)
 
 			enter.append('rect').attr(
@@ -279,18 +265,19 @@ M = {
 			)
 
 			textY = 30
+			instructionY = textY + 20
 
 			enter.append('text').attr(
 				class: 'name'
 				y: textY
 				x: -1 # Compensate for letters not starting immediately at the onset of the character
-				fill: (d) -> if d.instruction then '#fff' else '#999'
-			).text((d) -> if d.name[0] == 'C' then d.name else '')
+				fill: (d) -> '#999' #if d.instruction then '#fff' else '#999'
+			).text((d) -> if d.instruction then d.name else '')#if d.name[0] == 'C' then d.name else '')
 
 
 			enter.append('text').attr(
 				class: 'instruction'
-				y: textY + 20
+				y: instructionY
 				x: -1 # Compensate for letters not starting immediately at the onset of the character
 				fill: '#fff'
 			).text((d) -> d.instruction ? '')
@@ -318,20 +305,6 @@ M = {
 				fill: (d) ->   if d.error? then colorScale(d.error) else '#fff'
 				stroke: (d) -> if d.error? then colorScale(d.error) else '#fff'
 			)
-
-			# Pitch contours	
-			# Idea: Pitch contour only places where change occurs, e.g. the first upwards note, and the first downwards note
-			# update = notes.select('.contours').selectAll('.contour').data(data[...data.length - 1])
-			# contourY = textY - 5 # - half text height
-
-			# enter = update.enter().append('line').attr(
-			# 	class: 'contour'
-			# 	x1: (d, i) -> x(d.expectedAt) + 15
-			# 	x2: (d, i) -> x(data[i+1].expectedAt) - 15
-			# 	y1: (d, i) -> y(d.degree) + contourY - if data[i+1].degree - d.degree < 0 then 3 else -3
-			# 	y2: (d, i) -> y(d.degree) + contourY - if data[i+1].degree - d.degree > 0 then 3 else -3
-			# 	stroke: '#666'
-			# )
 
 		render.startTimeline = (duration) ->
 			timeline = opts.vis.select('.timeline')

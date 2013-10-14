@@ -105,8 +105,8 @@
     Theory.noteNameForKey = function(key, number) {
       return notes[key % 12] + (number ? '' + Math.floor(key / 12) - 1 : '');
     };
-    return Theory.timeBetweenNotes = function(bpm, noteSize) {
-      return noteSize * 1000 / (bpm / 60);
+    return Theory.timeBetweenNotes = function(bpm, notesPerBeat) {
+      return 1000 / (bpm / 60) / notesPerBeat;
     };
   })();
 
@@ -269,19 +269,40 @@
 
   instrument = initInstrument();
 
+  /*
+  
+  	Exercise: List of notes
+  
+  	Note:
+  		- Key
+  		- Time (normalized)
+  
+  
+  	Time visualization: Visualize beat and note times
+  		Input: Exercise, BPM, beatSize, noteSize
+  		Output: A major tick for each beat, and a minor tick for each note
+  
+  	Exercise visualization: Visualize notes and their errors
+  
+  
+  	--
+  */
+
+
   _.defer(function() {
-    var arm, bpm, ex, exercise, exerciseVis, height, metronomeVis, noteDuration, pad, stop, vis, width, _ref1;
+    var beatSize, beatsPerMeasure, bpm, exercise, height, metronomeVis, noteSize, pad, vis, width, _ref1;
     d('Starting');
     exercise = _.flatten([Theory.major(60), Theory.major(72), 72 + 12, 72 + 12, Theory.major(72).reverse(), Theory.major(60).reverse()]).map(function(key, index, arr) {
       return {
         key: key,
         time: index,
-        degree: index < arr.length / 2 ? index : (arr.length - index) - 1,
         hand: 'left'
       };
     });
     bpm = 120;
-    noteDuration = 1;
+    beatsPerMeasure = 4;
+    beatSize = 0.25;
+    noteSize = 0.0625;
     vis = d3.select('#exercise');
     _ref1 = vis.node().getBoundingClientRect(), width = _ref1.width, height = _ref1.height;
     height = 200;
@@ -290,44 +311,17 @@
       height: height + 150
     });
     pad = 40;
-    metronomeVis = M.metronome().width(width).pad(pad).beats(exercise.length).bpm(bpm).vis(vis);
-    metronomeVis();
-    exerciseVis = M.exercise().width(width).height(height).pad(pad).bpm(bpm).noteDuration(noteDuration).vis(vis.append('g').attr('transform', 'translate(0, 100)'));
-    ex = null;
-    stop = function() {
-      Metronome.stop();
-      exerciseVis.stopTimeline();
-      return ex.abort();
-    };
-    arm = function() {
-      return ex = start(exercise, bpm, noteDuration).on('start', function(notes) {
-        exerciseVis.startTimeline(notes[notes.length - 1].expectedAt);
-        return Metronome.start(bpm);
-      }).on('update', function(notes) {
-        return exerciseVis.notes(notes);
-      }).on('complete', function(notes) {
-        stop();
-        return d('Complete.');
-      });
-    };
-    arm();
-    key('a', function() {
-      return stop();
-    });
-    return key('r', function() {
-      stop();
-      return arm();
-    });
+    metronomeVis = M.time().beats(Math.ceil(exercise.length * (noteSize / beatSize))).beatSize(beatSize).noteSize(noteSize).width(width).pad(pad).vis(vis);
+    return metronomeVis();
   });
 
-  start = function(notes, bpm, noteDuration) {
+  start = function(notes, bpm, notesPerBeat) {
     var data, dispatch, duration, endTimeout, findCorrespondingIndex, startTime;
     dispatch = d3.dispatch('start', 'update', 'complete');
     data = notes.map(function(note) {
       return {
         key: note.key,
-        degree: note.degree,
-        expectedAt: note.time * Theory.timeBetweenNotes(bpm, noteDuration),
+        expectedAt: note.time * Theory.timeBetweenNotes(bpm, notesPerBeat),
         playedAt: null,
         name: Theory.noteNameForKey(note.key, true)
       };
@@ -371,7 +365,7 @@
       key = _arg.key;
       return key;
     }));
-    duration = notes[notes.length - 1].time * Theory.timeBetweenNotes(bpm, noteDuration);
+    duration = noteSize * exercise.length;
     endTimeout = setTimeout(function() {
       return dispatch.complete(data);
     }, duration * 2);
@@ -387,58 +381,53 @@
   };
 
   M = {
-    metronome: function() {
+    time: function() {
       var createElements, opts, render;
       opts = {
-        beats: 50,
+        beats: 10,
+        beatSize: 1,
+        noteSize: 1,
         width: 300,
         pad: 0,
-        bpm: 120,
         vis: null
       };
       createElements = function() {
-        var nome;
-        if (opts.vis.select('.metronome').empty()) {
-          nome = opts.vis.append('g').attr({
-            "class": 'metronome'
+        var parent;
+        if (opts.vis.select('.time-vis').empty()) {
+          parent = opts.vis.append('g').attr({
+            "class": 'time-vis'
           });
-          nome.append('g').attr({
+          parent.append('g').attr({
             "class": 'axis major'
           });
-          return nome.append('g').attr({
+          return parent.append('g').attr({
             "class": 'axis minor'
           });
         }
       };
       render = function() {
-        var beatRadius, beats, major, majors, minor, minors, nome, num, x, _i, _ref1;
-        beats = [];
-        majors = [];
-        minors = [];
-        for (num = _i = 0, _ref1 = opts.beats; 0 <= _ref1 ? _i < _ref1 : _i > _ref1; num = 0 <= _ref1 ? ++_i : --_i) {
-          beats.push({
-            num: num
-          });
-          majors.push(num);
-          if (num !== opts.beats - 1) {
-            minors.push(num + 0.25);
-            minors.push(num + 0.5);
-            minors.push(num + 0.75);
+        var duration, major, minor, n, parent, x;
+        duration = opts.beats * opts.beatSize;
+        x = d3.scale.linear().domain([0, duration]).range([opts.pad, opts.width - opts.pad]);
+        major = d3.svg.axis().scale(x).orient('bottom').tickValues((function() {
+          var _i, _ref1, _ref2, _results;
+          _results = [];
+          for (n = _i = 0, _ref1 = duration / opts.beatSize, _ref2 = opts.beatSize; _ref2 > 0 ? _i <= _ref1 : _i >= _ref1; n = _i += _ref2) {
+            _results.push(n);
           }
-        }
-        beatRadius = function(d, i) {
-          if (i % 4) {
-            return 2;
-          } else {
-            return 6;
+          return _results;
+        })()).tickSize(14);
+        minor = d3.svg.axis().scale(x).orient('bottom').tickValues((function() {
+          var _i, _ref1, _ref2, _results;
+          _results = [];
+          for (n = _i = 0, _ref1 = duration / opts.noteSize, _ref2 = opts.noteSize; _ref2 > 0 ? _i <= _ref1 : _i >= _ref1; n = _i += _ref2) {
+            _results.push(n);
           }
-        };
-        x = d3.scale.linear().domain([0, opts.beats - 1]).range([opts.pad, opts.width - opts.pad]);
-        major = d3.svg.axis().scale(x).orient('bottom').tickValues(majors).tickSize(14);
-        minor = d3.svg.axis().scale(x).orient('bottom').tickValues(minors).outerTickSize(0).innerTickSize(7);
-        nome = opts.vis.select('.metronome');
-        nome.select('.axis.major').call(major);
-        return nome.select('.axis.minor').call(minor);
+          return _results;
+        })()).outerTickSize(0).innerTickSize(7);
+        parent = opts.vis.select('.time-vis');
+        parent.select('.axis.major').call(major);
+        return parent.select('.axis.minor').call(minor);
       };
       return _.accessors(render, opts).addAll().add('vis', createElements).done();
     },
@@ -449,7 +438,7 @@
         height: 300,
         pad: 0,
         bpm: 120,
-        noteDuration: 1,
+        noteSize: 0.25,
         notes: [],
         vis: null
       };
@@ -472,7 +461,7 @@
         }
       };
       render = function() {
-        var colorScale, data, enter, errorScale, noteHeight, noteWidth, notes, textY, update, x, y;
+        var colorScale, data, enter, errorScale, instructionY, noteHeight, noteWidth, notes, textY, update, x, y;
         data = opts.notes;
         data[0].instruction = 'Ascend 2 octaves';
         data[15].instruction = 'Descend 2 octaves';
@@ -488,7 +477,7 @@
           "class": 'note',
           transform: function(d) {
             var _ref1;
-            return "translate(" + (x((_ref1 = d.expectedAt) != null ? _ref1 : d.playedAt)) + ", " + (y(d.degree)) + ")";
+            return "translate(" + (x((_ref1 = d.expectedAt) != null ? _ref1 : d.playedAt)) + ", " + (y(d.key)) + ")";
           }
         });
         enter.append('rect').attr({
@@ -498,19 +487,16 @@
           x: 0
         });
         textY = 30;
+        instructionY = textY + 20;
         enter.append('text').attr({
           "class": 'name',
           y: textY,
           x: -1,
           fill: function(d) {
-            if (d.instruction) {
-              return '#fff';
-            } else {
-              return '#999';
-            }
+            return '#999';
           }
         }).text(function(d) {
-          if (d.name[0] === 'C') {
+          if (d.instruction) {
             return d.name;
           } else {
             return '';
@@ -518,7 +504,7 @@
         });
         enter.append('text').attr({
           "class": 'instruction',
-          y: textY + 20,
+          y: instructionY,
           x: -1,
           fill: '#fff'
         }).text(function(d) {
