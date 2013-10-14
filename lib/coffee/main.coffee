@@ -58,8 +58,6 @@ _.defer ->
 		sequenceVis()
 
 	loadSequence(sequence)
-	# NOTE: We'll want to record incomplete sessions and aborts, too.
-	# And visits to the site.
 
 M = {
 	time: ->
@@ -135,12 +133,12 @@ M = {
 				.domain([0, duration])
 				.range([opts.pad, opts.width - opts.pad])
 
-			y = d3.functor(35)
+			y = -> 35
 
 			update = opts.vis.select('.seq-vis').selectAll('.note').data(notes)
 			enter = update.enter().append('g').attr(
 				class: 'note'
-				transform: (d) -> "translate(#{x(d.index * seq.noteSize)}, #{y(d.key)})"
+				transform: (d) -> "translate(#{x(d.index * seq.noteSize)}, #{y()})"
 			)
 
 			enter.append('rect').attr(
@@ -151,39 +149,35 @@ M = {
 			)
 
 			# Annotations
-			annOffset = 40
-
 			update = opts.vis.select('.seq-vis').selectAll('.annotation').data(seq.annotations)
 			enter = update.enter().append('g').attr(
 				class: 'annotation'
 			)
 
-			enter.append('text').attr(
-				class: 'from-key'
-				fill: '#fff'
-				transform: (d) -> "translate(#{x(notes[d.from].index * seq.noteSize) - 2}, #{y(d.key) + annOffset})"
-			).text((d) -> Theory.nameForKey notes[d.from].key, true).each -> this.parentNode.fromKey = this
+			xAnn = (d, type) -> x(notes[d[type]].index * seq.noteSize) - 2 # Subtract two to visually align with the note above
+			yAnn = -> y() + 40
+			annKeyLabel = (type) ->
+				enter.append('text').attr(
+					class: type + '-key'
+					transform: (d) -> "translate(#{xAnn(d, type)}, #{yAnn()})"
+				).text((d) -> Theory.nameForKey notes[d.from].key, true).each -> this.parentNode[type + 'Key'] = this
+			
+			# Label 'to' and 'from' keys
+			annKeyLabel 'to'
+			annKeyLabel 'from'
 
-			enter.append('text').attr(
-				class: 'to-key'
-				fill: '#fff'
-				transform: (d) -> "translate(#{x(notes[d.to].index * seq.noteSize) - 2}, #{y(d.key) + annOffset})"
-			).text((d) -> Theory.nameForKey notes[d.to].key, true).each -> this.parentNode.toKey = this
-
-			enter.append('text').attr(
-				fill: '#fff'
-				transform: (d) -> "translate(#{x(notes[d.from].index * seq.noteSize) - 2}, #{y(d.key) + annOffset + 20})"
-			).text((d) -> d.text)
-
-			linePad = 10
+			pad = 10
 			enter.append('line').attr(
-				x1: (d) -> x(notes[d.from].index * seq.noteSize) + this.parentNode.fromKey.getComputedTextLength() + linePad
-				x2: (d) -> x(notes[d.to].index * seq.noteSize) - linePad
-				y1: (d) -> y() + annOffset - 4
-				y2: (d) -> y() + annOffset - 4
+				x1: (d) -> xAnn(d, 'from') + this.parentNode.fromKey.getComputedTextLength() + pad
+				x2: (d) -> xAnn(d, 'to') - pad
+				y1: (d) -> yAnn() - 4 # Tweaked for 12px labels.
+				y2: (d) -> yAnn() - 4
 				stroke: '#555'
 			)
 
+			enter.append('text').attr(
+				transform: (d) -> "translate(#{x(notes[d.from].index * seq.noteSize) - 2}, #{yAnn() + 20})"
+			).text((d) -> d.text)
 
 		_.accessors(render, opts).addAll()
 			.add('vis', createElements)

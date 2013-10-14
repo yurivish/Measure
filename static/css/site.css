@@ -11,7 +11,7 @@ h1,h2{font-size:36px;line-height:36px}
 #page #control-bar .selects{display:-webkit-box;display:-moz-box;display:-webkit-flex;display:-ms-flexbox;display:box;display:flex;-webkit-box-orient:vertical;-moz-box-orient:vertical;-o-box-orient:vertical;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;border-right:1px solid #333;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;}
 #page #control-bar .selects .select{display:-webkit-box;display:-moz-box;display:-webkit-flex;display:-ms-flexbox;display:box;display:flex;max-width:auto;-webkit-box-flex:1;-moz-box-flex:1;-o-box-flex:1;box-flex:1;-webkit-flex:auto;-ms-flex:auto;flex:auto;padding-right:40px;border-bottom:1px solid #333;}
 #page #control-bar .selects .select:last-child{border-bottom:none}
-#page #control-bar .selects .select .option{-webkit-box-flex:1;-moz-box-flex:1;-o-box-flex:1;box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:120px;position:relative;line-height:62.5px;padding-left:40px;cursor:pointer;color:#999;}
+#page #control-bar .selects .select .option{-webkit-box-flex:1;-moz-box-flex:1;-o-box-flex:1;box-flex:1;-webkit-flex:1;-ms-flex:1;flex:1;min-width:120.5px;position:relative;line-height:62.5px;padding-left:40px;cursor:pointer;color:#999;}
 #page #control-bar .selects .select .option:hover{color:#fff}
 #page #control-bar .selects .select .option:active{color:#ccc}
 #page #control-bar .selects .select .option.active{color:#fff;font-weight:bold}
@@ -24,7 +24,7 @@ h1,h2{font-size:36px;line-height:36px}
 #page #control-bar .main .play polygon,#page #control-bar .main .play rect{fill:#eee;pointer-events:none}
 #page #piece text.name,#page #piece text.instruction{font-size:12px}
 #page #piece .seq-vis rect{shape-rendering:crispEdges}
-#page #piece .seq-vis .annotation{font-size:12px}
+#page #piece .seq-vis .annotation{font-size:12px;fill:#fff}
 #page #piece .axis text{font:10px sans-serif;display:none}
 #page #piece .axis .domain{display:none}
 #page #piece .axis line,#page #piece .axis path{fill:none;stroke:#555;shape-rendering:crispEdges}

@@ -378,17 +378,19 @@
         }
       };
       render = function() {
-        var annOffset, duration, enter, linePad, notes, seq, update, x, y;
+        var annKeyLabel, duration, enter, notes, pad, seq, update, x, xAnn, y, yAnn;
         seq = opts.seq;
         notes = seq.notes;
         duration = seq.beats * seq.beatSize;
         x = d3.scale.linear().domain([0, duration]).range([opts.pad, opts.width - opts.pad]);
-        y = d3.functor(35);
+        y = function() {
+          return 35;
+        };
         update = opts.vis.select('.seq-vis').selectAll('.note').data(notes);
         enter = update.enter().append('g').attr({
           "class": 'note',
           transform: function(d) {
-            return "translate(" + (x(d.index * seq.noteSize)) + ", " + (y(d.key)) + ")";
+            return "translate(" + (x(d.index * seq.noteSize)) + ", " + (y()) + ")";
           }
         });
         enter.append('rect').attr({
@@ -397,56 +399,52 @@
           fill: '#fff',
           stroke: '#fff'
         });
-        annOffset = 40;
         update = opts.vis.select('.seq-vis').selectAll('.annotation').data(seq.annotations);
         enter = update.enter().append('g').attr({
           "class": 'annotation'
         });
-        enter.append('text').attr({
-          "class": 'from-key',
-          fill: '#fff',
-          transform: function(d) {
-            return "translate(" + (x(notes[d.from].index * seq.noteSize) - 2) + ", " + (y(d.key) + annOffset) + ")";
-          }
-        }).text(function(d) {
-          return Theory.nameForKey(notes[d.from].key, true);
-        }).each(function() {
-          return this.parentNode.fromKey = this;
+        xAnn = function(d, type) {
+          return x(notes[d[type]].index * seq.noteSize) - 2;
+        };
+        yAnn = function() {
+          return y() + 40;
+        };
+        annKeyLabel = function(type) {
+          return enter.append('text').attr({
+            "class": type + '-key',
+            transform: function(d) {
+              return "translate(" + (xAnn(d, type)) + ", " + (yAnn()) + ")";
+            }
+          }).text(function(d) {
+            return Theory.nameForKey(notes[d.from].key, true);
+          }).each(function() {
+            return this.parentNode[type + 'Key'] = this;
+          });
+        };
+        annKeyLabel('to');
+        annKeyLabel('from');
+        pad = 10;
+        enter.append('line').attr({
+          x1: function(d) {
+            return xAnn(d, 'from') + this.parentNode.fromKey.getComputedTextLength() + pad;
+          },
+          x2: function(d) {
+            return xAnn(d, 'to') - pad;
+          },
+          y1: function(d) {
+            return yAnn() - 4;
+          },
+          y2: function(d) {
+            return yAnn() - 4;
+          },
+          stroke: '#555'
         });
-        enter.append('text').attr({
-          "class": 'to-key',
-          fill: '#fff',
+        return enter.append('text').attr({
           transform: function(d) {
-            return "translate(" + (x(notes[d.to].index * seq.noteSize) - 2) + ", " + (y(d.key) + annOffset) + ")";
-          }
-        }).text(function(d) {
-          return Theory.nameForKey(notes[d.to].key, true);
-        }).each(function() {
-          return this.parentNode.toKey = this;
-        });
-        enter.append('text').attr({
-          fill: '#fff',
-          transform: function(d) {
-            return "translate(" + (x(notes[d.from].index * seq.noteSize) - 2) + ", " + (y(d.key) + annOffset + 20) + ")";
+            return "translate(" + (x(notes[d.from].index * seq.noteSize) - 2) + ", " + (yAnn() + 20) + ")";
           }
         }).text(function(d) {
           return d.text;
-        });
-        linePad = 10;
-        return enter.append('line').attr({
-          x1: function(d) {
-            return x(notes[d.from].index * seq.noteSize) + this.parentNode.fromKey.getComputedTextLength() + linePad;
-          },
-          x2: function(d) {
-            return x(notes[d.to].index * seq.noteSize) - linePad;
-          },
-          y1: function(d) {
-            return y() + annOffset - 4;
-          },
-          y2: function(d) {
-            return y() + annOffset - 4;
-          },
-          stroke: '#555'
         });
       };
       return _.accessors(render, opts).addAll().add('vis', createElements).add('seq', render).done();
