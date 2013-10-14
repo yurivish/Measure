@@ -455,18 +455,21 @@
         }
       };
       render = function() {
-        var duration, enter, played, seq, update, x;
+        var duration, enter, hi, lo, mid, played, seq, update, x;
         seq = opts.seq;
         played = opts.played;
         duration = seq.beats * seq.beatSize;
         x = d3.scale.linear().domain([0, duration]).range([opts.pad, opts.width - opts.pad]);
         update = opts.vis.selectAll('.note').data(played);
         enter = update.enter().append('g').attr('class', 'note');
+        lo = 0;
+        hi = 35;
+        mid = (lo + hi) / 2;
         enter.append('circle').attr({
           cx: function(d) {
             return x(d.expectedBeats + d.errorBeats);
           },
-          cy: 23.5,
+          cy: mid,
           r: 3,
           fill: color
         });
@@ -477,8 +480,19 @@
           x2: function(d) {
             return x(d.expectedBeats + d.errorBeats);
           },
-          y1: 15,
-          y2: 23.5,
+          y1: lo,
+          y2: mid,
+          stroke: color
+        });
+        enter.append('line').attr({
+          x1: function(d) {
+            return x(d.expectedBeats);
+          },
+          x2: function(d) {
+            return x(d.expectedBeats + d.errorBeats);
+          },
+          y1: hi,
+          y2: mid,
           stroke: color
         });
         return update.exit().remove();

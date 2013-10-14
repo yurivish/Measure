@@ -258,10 +258,12 @@ M = {
 			# 	fill: color
 			# )
 
+			lo = 0#14
+			hi = 35
+			mid = (lo + hi) / 2
 			enter.append('circle').attr(
 				cx: (d) -> x(d.expectedBeats + d.errorBeats)
-				cy: 23.5
-				# r: (d) -> Math.min 10, Math.abs x(d.errorBeats) - x(0)
+				cy: mid
 				r: 3
 				fill: color
 			)
@@ -269,8 +271,15 @@ M = {
 			enter.append('line').attr(
 				x1: (d) -> x(d.expectedBeats)
 				x2: (d) -> x(d.expectedBeats + d.errorBeats)
-				y1: 15
-				y2: 23.5
+				y1: lo
+				y2: mid
+				stroke: color
+			)
+			enter.append('line').attr(
+				x1: (d) -> x(d.expectedBeats)
+				x2: (d) -> x(d.expectedBeats + d.errorBeats)
+				y1: hi
+				y2: mid
 				stroke: color
 			)
 
