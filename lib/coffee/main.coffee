@@ -28,9 +28,9 @@ _.defer ->
 			{ from: 15, to: 29, text: 'Descend'}
 		]
 
-		beatsPerMeasure: 4 				# Numerator of time signature
-		beatSize: 0.25 					# Denominator of time signature
-		noteSize: 0.25					# Indirectly specifies the number of notes in a beat
+		beatsPerMeasure: 4 		# Numerator of time signature
+		beatSize: 0.25 			# Denominator of time signature
+		noteSize: 0.25			# Indirectly specifies the number of notes in a beat
 	}
 	sequence.beats = Math.ceil sequence.notes.length * (sequence.noteSize / sequence.beatSize)
 
@@ -213,6 +213,15 @@ M = {
 			played: null
 		}
 
+		color = (d) ->
+			switch
+				when Math.abs(d.errorMs) < 10
+					'#00fa00'
+				when d.errorBeats < 0
+					'#ff0012'
+				else
+					'#00b6ff'
+
 		render = ->
 			seq = opts.seq
 			played = opts.played
@@ -229,14 +238,42 @@ M = {
 
 			update = opts.vis.selectAll('.note').data(played)
 			enter = update.enter().append('g').attr('class', 'note')
-			enter.append('rect').attr(
-				x: (d) -> x(d.expectedBeats) + if d.errorBeats > 0 then -(x(d.errorBeats) - x(0)) else 0
-				y: 15
-				width: (d) -> Math.abs x(d.errorBeats) - x(0)
-				height: 10
-				fill: (d) -> if d.errorBeats < 0 then '#ff0000' else '#009eff'
-				stroke: (d) -> if d.errorBeats < 0 then '#ff0000' else '#009eff'
+
+			# enter.append('rect').attr(
+			# 	x: (d) -> Math.round x(d.expectedBeats + d.errorBeats)# + if d.errorBeats > 0 then -(x(d.errorBeats) - x(0)) else 0
+			# 	y: 20
+			# 	width: 5#(d) -> Math.abs x(d.errorBeats) - x(0)
+			# 	height: 5
+			# 	fill: color
+			# 	stroke: color
+			# )
+			
+			# enter.append('rect').attr(
+			# 	x: (d) -> Math.round x(d.expectedBeats)
+			# 	y: 35
+			# 	# r: (d) -> Math.min 10, Math.abs x(d.errorBeats) - x(0)
+			# 	width: 4
+			# 	height: 10
+			# 	stroke: color
+			# 	fill: color
+			# )
+
+			enter.append('circle').attr(
+				cx: (d) -> x(d.expectedBeats + d.errorBeats)
+				cy: 23.5
+				# r: (d) -> Math.min 10, Math.abs x(d.errorBeats) - x(0)
+				r: 3
+				fill: color
 			)
+
+			enter.append('line').attr(
+				x1: (d) -> x(d.expectedBeats)
+				x2: (d) -> x(d.expectedBeats + d.errorBeats)
+				y1: 15
+				y2: 23.5
+				stroke: color
+			)
+
 			update.exit().remove()
 
 		_.accessors(render, opts).addAll()

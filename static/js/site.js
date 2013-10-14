@@ -435,7 +435,7 @@
       return _.accessors(render, opts).addAll().done();
     },
     error: function() {
-      var opts, render;
+      var color, opts, render;
       opts = {
         width: 300,
         pad: 0,
@@ -443,6 +443,16 @@
         vis: null,
         seq: null,
         played: null
+      };
+      color = function(d) {
+        switch (false) {
+          case !(Math.abs(d.errorMs) < 10):
+            return '#00fa00';
+          case !(d.errorBeats < 0):
+            return '#ff0012';
+          default:
+            return '#00b6ff';
+        }
       };
       render = function() {
         var duration, enter, played, seq, update, x;
@@ -452,29 +462,24 @@
         x = d3.scale.linear().domain([0, duration]).range([opts.pad, opts.width - opts.pad]);
         update = opts.vis.selectAll('.note').data(played);
         enter = update.enter().append('g').attr('class', 'note');
-        enter.append('rect').attr({
-          x: function(d) {
-            return x(d.expectedBeats) + (d.errorBeats > 0 ? -(x(d.errorBeats) - x(0)) : 0);
+        enter.append('circle').attr({
+          cx: function(d) {
+            return x(d.expectedBeats + d.errorBeats);
           },
-          y: 15,
-          width: function(d) {
-            return Math.abs(x(d.errorBeats) - x(0));
+          cy: 23.5,
+          r: 3,
+          fill: color
+        });
+        enter.append('line').attr({
+          x1: function(d) {
+            return x(d.expectedBeats);
           },
-          height: 10,
-          fill: function(d) {
-            if (d.errorBeats < 0) {
-              return '#ff0000';
-            } else {
-              return '#009eff';
-            }
+          x2: function(d) {
+            return x(d.expectedBeats + d.errorBeats);
           },
-          stroke: function(d) {
-            if (d.errorBeats < 0) {
-              return '#ff0000';
-            } else {
-              return '#009eff';
-            }
-          }
+          y1: 15,
+          y2: 23.5,
+          stroke: color
         });
         return update.exit().remove();
       };
