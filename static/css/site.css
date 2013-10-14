@@ -29,5 +29,4 @@ h1,h2{font-size:36px;line-height:36px}
 #page #piece .axis text{font:10px sans-serif;display:none}
 #page #piece .axis .domain{display:none}
 #page #piece .axis line,#page #piece .axis path{fill:none;stroke:#555;shape-rendering:crispEdges}
-#page #piece .axis.full line,#page #piece .axis.full path{stroke:#222}
 

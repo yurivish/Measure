@@ -416,9 +416,6 @@
             "class": 'axis major'
           });
           vis.append('g').attr({
-            "class": 'axis major'
-          });
-          vis.append('g').attr({
             "class": 'axis minor'
           });
         }
@@ -442,7 +439,7 @@
       return _.accessors(render, opts).addAll().done();
     },
     error: function() {
-      var color, colorScale, opts, render;
+      var colorGrad, colorGradScale, colorThreshScale, colorThreshold, line, opts, render, x;
       opts = {
         width: 300,
         pad: 0,
@@ -451,42 +448,57 @@
         seq: null,
         played: null
       };
-      colorScale = d3.scale.linear().domain([-50, 0, 50]).range(['#009eff', '#fff', '#ff0000']).interpolate(d3.interpolateLab).clamp(true);
-      color = function(d) {
-        switch (false) {
-          case !(Math.abs(d.errorMs) < 10):
-            '#00fa00';
-            break;
-          case !(d.errorMs < 0):
-            '#ff0012';
-            break;
-          default:
-            '#00b6ff';
-        }
-        return colorScale(d.errorMs);
+      colorThreshScale = d3.scale.threshold().domain([-10, 10]).range(['#00b6ff', '#00fa00', '#ff0012']);
+      colorThreshold = function(d) {
+        return colorThreshScale(d.errorMs);
       };
+      colorGradScale = d3.scale.linear().domain([-50, 0, 50]).range(['#009eff', '#fff', '#ff0000']).interpolate(d3.interpolateLab).clamp(true);
+      colorGrad = function(d) {
+        return colorGradScale(d.errorMs);
+      };
+      x = d3.scale.linear();
+      line = d3.svg.line().x(function(d) {
+        return d.x;
+      }).y(function(d) {
+        return d.y;
+      }).interpolate('cardinal').tension(.4);
       render = function() {
-        var duration, enter, played, seq, update, x;
+        var duration, enter, played, seq, update;
         seq = opts.seq;
         played = opts.played;
         duration = seq.beats * seq.beatSize;
-        x = d3.scale.linear().domain([0, duration]).range([opts.pad, opts.width - opts.pad]);
+        x.domain([0, duration]).range([opts.pad, opts.width - opts.pad]);
         update = opts.vis.selectAll('.note').data(played);
         enter = update.enter().append('g').attr('class', 'note');
-        enter.append('line').attr({
-          x1: function(d) {
-            return x(d.expectedBeats);
+        enter.append('rect').attr({
+          x: function(d) {
+            return Math.round(x(d.expectedBeats + d.errorBeats) + (d.errorBeats > 0 ? -(x(d.errorBeats) - x(0)) : 0));
           },
-          x2: function(d) {
-            return x(d.expectedBeats + seq.noteSize);
+          y: 0,
+          height: 14,
+          width: function(d) {
+            return Math.max(1, Math.abs(x(d.errorBeats) - x(0)));
           },
-          y1: function(d) {
-            return 30 - d.errorMs / 50;
+          stroke: colorThreshold,
+          fill: colorThreshold
+        });
+        enter.append('path').attr({
+          d: function(d) {
+            return line([
+              {
+                x: x(d.expectedBeats),
+                y: 30 - d.errorMs / 5
+              }, {
+                x: x(d.expectedBeats + seq.noteSize) - (x(d.expectedBeats + seq.noteSize) - x(d.expectedBeats)) / 2,
+                y: 30
+              }, {
+                x: x(d.expectedBeats + seq.noteSize),
+                y: 30
+              }
+            ]);
           },
-          y2: function(d) {
-            return 30 + d.errorMs / 50;
-          },
-          stroke: color
+          stroke: colorGrad,
+          fill: 'transparent'
         });
         return update.exit().remove();
       };

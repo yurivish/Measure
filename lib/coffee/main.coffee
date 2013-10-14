@@ -200,7 +200,6 @@ M = {
 			vis = opts.vis
 			if vis.select('.axis.major').empty()
 				vis.append('g').attr(class: 'axis major')
-				vis.append('g').attr(class: 'axis major')
 				vis.append('g').attr(class: 'axis minor')
 
 			vis.select('.axis.major').call major.tickValues(n for n in [0..duration / opts.beatSize] by opts.beatSize)
@@ -220,24 +219,26 @@ M = {
 			played: null
 		}
 
-		colorScale = d3.scale.linear()
+
+		colorThreshScale = d3.scale.threshold()
+			.domain([-10, 10])
+			.range(['#00b6ff', '#00fa00', '#ff0012'])
+		colorThreshold = (d) -> colorThreshScale(d.errorMs)
+
+		colorGradScale = d3.scale.linear()
 			.domain([-50, 0, 50])
 			.range(['#009eff', '#fff', '#ff0000'])
 			.interpolate(d3.interpolateLab)
 			.clamp(true)
+		colorGrad = (d) -> colorGradScale(d.errorMs)
 
-		color = (d) ->
+		x = d3.scale.linear()
 
-			switch
-				when Math.abs(d.errorMs) < 10
-					'#00fa00'
-				when d.errorMs < 0
-					'#ff0012'
-				else
-					'#00b6ff'
-
-			colorScale(d.errorMs)
-
+		line = d3.svg.line()
+			.x((d) -> d.x)
+			.y((d) -> d.y)
+			.interpolate('cardinal')
+			.tension(.4)
 
 		render = ->
 			seq = opts.seq
@@ -245,82 +246,34 @@ M = {
 
 			# Scale from beat time to horizontal space
 			duration = seq.beats * seq.beatSize
-			x = d3.scale.linear()
+			x
 				.domain([0, duration])
 				.range([opts.pad, opts.width - opts.pad])
-
-			# expectedMs, expectedBeats
-			# playedMs, playedBeats
-			# errorMs, errorBeats
 
 			update = opts.vis.selectAll('.note').data(played)
 			enter = update.enter().append('g').attr('class', 'note')
 
-			# Rectangles embedded between notes
-			# enter.append('rect').attr(
-			# 	x: (d) -> Math.round x(d.expectedBeats + d.errorBeats) + if d.errorBeats > 0 then -(x(d.errorBeats) - x(0)) else 0
-			# 	y: M.noteTop
-			# 	width: (d) -> Math.max 1, Math.abs x(d.errorBeats) - x(0)
-			# 	height: M.noteHeight
-			# 	stroke: color
-			# 	fill: color
-			# )
-
-			# Rectangles below axes but above notes
-			# enter.append('rect').attr(
-			# 	# x: (d) -> Math.round x(d.expectedBeats)
-			# 	x: (d) -> Math.round x(d.expectedBeats)
-			# 	y: 30
-			# 	height: 14
-			# 	# y: M.noteTop
-			# 	# height: M.noteHeight
-			# 	width: 0
-			# 	fill: color
-			# ).transition().ease('exp-out').duration(350).attr(
-			# 	width: x(seq.noteSize) - x(0) + .5
-			# )
-
-			# Lines with a circle between 'em'
-			# lo = 0#14
-			# hi = M.noteTop
-			# mid = (lo + hi) / 2
-			# enter.append('circle').attr(
-			# 	cx: (d) -> x(d.expectedBeats + d.errorBeats)
-			# 	cy: mid
-			# 	r: 3
-			# 	fill: color
-			# )
-			# enter.append('line').attr(
-			# 	x1: (d) -> x(d.expectedBeats)
-			# 	x2: (d) -> x(d.expectedBeats + d.errorBeats)
-			# 	y1: lo
-			# 	y2: mid
-			# 	stroke: color
-			# )
-			# enter.append('line').attr(
-			# 	x1: (d) -> x(d.expectedBeats)
-			# 	x2: (d) -> x(d.expectedBeats + d.errorBeats)
-			# 	y1: hi
-			# 	y2: mid
-			# 	stroke: color
-			# )
-
-			# Filled polygon version of the above
-			# enter.append('polygon').attr(
-			# 	points: (d) -> [
-			# 		x(d.expectedBeats), lo
-			# 		x(d.expectedBeats + d.errorBeats), mid	
-			# 		x(d.expectedBeats), hi
-			# 	].join(',')
-			# 	fill: color
-			# )
-
-			enter.append('line').attr(
-				x1: (d) -> x(d.expectedBeats)
-				x2: (d) -> x(d.expectedBeats + seq.noteSize)
-				y1: (d) -> 30 - d.errorMs / 50
-				y2: (d) -> 30 + d.errorMs / 50
-				stroke: color
+			# Rectangles embedded between the axes
+			enter.append('rect').attr(
+				x: (d) -> Math.round x(d.expectedBeats + d.errorBeats) + if d.errorBeats > 0 then -(x(d.errorBeats) - x(0)) else 0
+				# y: M.noteTop
+				# height: M.noteHeight
+				y: 0
+				height: 14
+				width: (d) -> Math.max 1, Math.abs x(d.errorBeats) - x(0)
+				stroke: colorThreshold
+				fill: colorThreshold
+			)
+			
+			# NOTE: Can stack up all the wiggly lines and make a 'boquet'
+			enter.append('path').attr(
+				d: (d) -> line([
+					{ x: x(d.expectedBeats), y: 30 - d.errorMs / 5 } # / 5?	
+					{ x: x(d.expectedBeats + seq.noteSize) - (x(d.expectedBeats + seq.noteSize) - x(d.expectedBeats)) / 2, y: 30 }
+					{ x: x(d.expectedBeats + seq.noteSize), y: 30 }
+				])
+				stroke: colorGrad
+				fill: 'transparent'
 			)
 
 			update.exit().remove()
