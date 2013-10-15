@@ -13,7 +13,7 @@ initInstrument = ->
 					[cmd, key, velocity] = e.data
 					if cmd == 144 && velocity > 0
 						# MIDI: Note on
-						d 'Key down:', key
+						# d 'Key down:', key
 						dispatch.keydown { key, velocity, time: e.receivedTime, event: e }
 					else if cmd == 128 || (cmd == 144 && velocity == 0)
 						# MIDI: Note off || Note on with velocity 0 (some instruments are known to do this.)
@@ -69,7 +69,6 @@ initInstrument = ->
 		id
 
 	dispatch.waitForPress = (key) ->
-		d 'waiting for', key
 		# TODO: We'll need a way to cancel these, too...
 		makePromise (defer) ->
 			fulfillWhen defer, 'keydown' , (e) -> e.key == key

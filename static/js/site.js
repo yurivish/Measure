@@ -106,9 +106,10 @@
     Theory.pitchForKey = function(key) {
       return pitches[key - 12];
     };
-    return Theory.nameForKey = function(key, withNumber) {
+    Theory.nameForKey = function(key, withNumber) {
       return notes[key % 12] + (withNumber ? '' + Math.floor(key / 12) - 1 : '');
     };
+    return Theory.notes = notes;
   })();
 
   makePromise = function(fn) {
@@ -129,7 +130,6 @@
           var cmd, key, velocity, _ref1;
           _ref1 = e.data, cmd = _ref1[0], key = _ref1[1], velocity = _ref1[2];
           if (cmd === 144 && velocity > 0) {
-            d('Key down:', key);
             return dispatch.keydown({
               key: key,
               velocity: velocity,
@@ -215,7 +215,6 @@
       return id;
     };
     dispatch.waitForPress = function(key) {
-      d('waiting for', key);
       return makePromise(function(defer) {
         return fulfillWhen(defer, 'keydown', function(e) {
           return e.key === key;
@@ -226,45 +225,55 @@
   };
 
   Metronome = (function() {
-    var active, dispatch, gainNode, index, interval, lookaheadTime, nextNoteTime, playNoteAt, schedule, seq, timeout, volume;
+    var active, dispatch, gainNode, index, interval, lookaheadTime, nextNoteTime, pitch, schedule, timeout, volume;
     dispatch = d3.dispatch('tick');
     audioContext = new AudioContext();
     active = false;
     lookaheadTime = nextNoteTime = interval = null;
     timeout = null;
-    volume = 0.05;
+    volume = 0.2;
     gainNode = audioContext.createGain();
     gainNode.connect(audioContext.destination);
     gainNode.gain.value = volume;
-    seq = null;
+    pitch = 440;
     index = 0;
-    playNoteAt = function(time) {
-      var fadeDuration, key, osc, tickDuration;
+    dispatch.playNoteAt = function(pitch, time) {
+      var fadeDuration, osc, tickDuration;
       osc = audioContext.createOscillator();
       osc.connect(gainNode);
-      if (index < seq.notes.length && (key = seq.notes[index].key) !== null) {
-        osc.frequency.value = Theory.pitchForKey(key);
-        tickDuration = 1 / 10;
-        fadeDuration = 1 / 1000;
-        gainNode.gain.setValueAtTime(0, time);
-        gainNode.gain.linearRampToValueAtTime(volume, time + fadeDuration);
-        gainNode.gain.linearRampToValueAtTime(0.0, time + tickDuration - fadeDuration);
-        osc.noteOn(time);
-        osc.noteOff(time + tickDuration);
-      }
-      return index += seq.beatSize / seq.noteSize;
+      osc.frequency.value = pitch;
+      tickDuration = 1 / 10;
+      fadeDuration = 1 / 1000;
+      gainNode.gain.setValueAtTime(0, time);
+      gainNode.gain.linearRampToValueAtTime(volume, time + fadeDuration);
+      gainNode.gain.linearRampToValueAtTime(0.0, time + tickDuration - fadeDuration);
+      osc.noteOn(time);
+      return osc.noteOff(time + tickDuration);
     };
     schedule = function() {
+      var nextNotePitch;
       while (nextNoteTime <= audioContext.currentTime + lookaheadTime) {
-        playNoteAt(nextNoteTime);
+        nextNotePitch = (function() {
+          switch (false) {
+            case !_.isNumber(pitch):
+              return pitch;
+            case !(index < pitch.length):
+              return pitch[index++];
+            default:
+              return null;
+          }
+        })();
+        if (nextNotePitch) {
+          dispatch.playNoteAt(nextNotePitch, nextNoteTime);
+        }
         nextNoteTime += interval;
       }
       if (active) {
         return timeout = setTimeout(schedule, Math.min(interval / 2, 200));
       }
     };
-    dispatch.start = function(bpm, _seq) {
-      seq = _seq;
+    dispatch.start = function(bpm, pitches) {
+      pitch = pitches != null ? pitches : 440;
       interval = 60 / bpm;
       lookaheadTime = interval * 2;
       nextNoteTime = audioContext.currentTime;
@@ -283,6 +292,72 @@
   instrument = initInstrument();
 
   _.defer(function() {
+    var go, rnote, rseq;
+    d('Initializing key exercise.');
+    rnote = function() {
+      return Theory.notes[~~(12 * Math.random())];
+    };
+    rseq = function(n) {
+      var note, seq;
+      seq = [rnote()];
+      while (seq.length < n) {
+        note = rnote();
+        if (note !== seq[seq.length - 1]) {
+          seq.push(note);
+        }
+      }
+      return seq;
+    };
+    go = function() {
+      var key, play, waitForKey;
+      d('waiting for', name);
+      key = 60 + _.indexOf(Theory.notes, name);
+      Metronome.playNoteAt(Theory.pitchForKey(key), 0);
+      waitForKey = function(expected) {
+        return makePromise(function(defer) {
+          return instrument.watchOnce('keydown', function(e) {
+            var pressed;
+            pressed = Theory.nameForKey(e.key);
+            if (pressed === expected) {
+              return defer.resolve(pressed);
+            } else {
+              d('Rejecting');
+              return defer.reject([expected, pressed]);
+            }
+          });
+        });
+      };
+      play = function(seq) {
+        var name, p, _fn, _i, _len, _ref1;
+        d.apply(null, ['Play'].concat(__slice.call(seq)));
+        p = waitForKey(seq[0]);
+        _ref1 = seq.slice(1);
+        _fn = function(name) {
+          return p = p.then(function(pressed) {
+            d(pressed + '...');
+            return waitForKey(name);
+          });
+        };
+        for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+          name = _ref1[_i];
+          _fn(name);
+        }
+        return p.then(function(pressed) {
+          d('%cSUCCESS!', 'color: #00b600; font-weight: bold;');
+          return play(rseq(seq.length));
+        }, function(_arg) {
+          var expected, pressed;
+          pressed = _arg[0], expected = _arg[1];
+          d("%cWRONG! " + pressed + " != " + expected + ".", 'font-weight: bold; color: #ff0012');
+          return play(seq);
+        });
+      };
+      return play(rseq(1));
+    };
+    return go();
+  });
+
+  (function() {
     var loadSequence, sequence, start, vis, width;
     d('Starting');
     vis = d3.select('#piece');
@@ -328,7 +403,19 @@
       sequenceVis = M.sequence().width(width).pad(pad).bpm(bpm).vis(vis.append('g').attr('class', 'seq-vis')).seq(seq);
       sequenceVis();
       return start(seq, bpm).on('start', function() {
-        return Metronome.start(120, seq);
+        var note, pitches;
+        pitches = (function() {
+          var _i, _len, _ref1, _ref2, _results;
+          _ref2 = seq.notes;
+          _ref1 = seq.beatSize / seq.noteSize;
+          _results = [];
+          for ((_ref1 > 0 ? (_i = 0, _len = _ref2.length) : _i = _ref2.length - 1); _ref1 > 0 ? _i < _len : _i >= 0; _i += _ref1) {
+            note = _ref2[_i];
+            _results.push(Theory.pitchForKey(note.key));
+          }
+          return _results;
+        })();
+        return Metronome.start(120, pitches);
       }).on('update', function(played) {
         return errorVis.played(played);
       }).on('end', function() {
@@ -470,7 +557,7 @@
       return _.accessors(render, opts).addAll().done();
     },
     error: function() {
-      var colorGrad, colorGradScale, colorThreshScale, colorThreshold, line, opts, render, x;
+      var gradColor, opts, render, solidColor, x;
       opts = {
         width: 300,
         pad: 0,
@@ -479,22 +566,23 @@
         seq: null,
         played: null
       };
-      colorThreshScale = d3.scale.threshold().domain([-10, 10]).range(['#00b6ff', '#00fa00', '#ff0012']);
-      colorThreshold = function(d) {
-        return colorThreshScale(d.errorMs);
-      };
-      colorGradScale = d3.scale.linear().domain([-50, 0, 50]).range(['#009eff', '#fff', '#ff0000']).interpolate(d3.interpolateLab).clamp(true);
-      colorGrad = function(d) {
-        return colorGradScale(d.errorMs);
-      };
+      solidColor = (function() {
+        var colorScale;
+        colorScale = d3.scale.threshold().domain([-10, 10]).range(['#00b6ff', '#00fa00', '#ff0012']);
+        return function(d) {
+          return colorScale(d.errorMs);
+        };
+      })();
+      gradColor = (function() {
+        var colorScale;
+        colorScale = d3.scale.linear().domain([-50, 0, 50]).range(['#009eff', '#fff', '#ff0000']).interpolate(d3.interpolateLab).clamp(true);
+        return function(d) {
+          return colorScale(d.errorMs);
+        };
+      })();
       x = d3.scale.linear();
-      line = d3.svg.line().x(function(d) {
-        return d.x;
-      }).y(function(d) {
-        return d.y;
-      }).interpolate('cardinal').tension(.4);
       render = function() {
-        var duration, enter, mid, played, seq, update;
+        var duration, enter, max, mid, min, played, seq, update;
         seq = opts.seq;
         played = opts.played;
         duration = seq.beats * seq.beatSize;
@@ -510,27 +598,25 @@
           width: function(d) {
             return Math.max(1, Math.abs(x(d.errorBeats) - x(0)));
           },
-          stroke: colorThreshold,
-          fill: colorThreshold
+          stroke: solidColor,
+          fill: solidColor
         });
+        min = Math.min, max = Math.max;
         mid = (M.majorTickSize + M.noteTop) / 2;
-        enter.append('path').attr({
-          d: function(d) {
-            return line([
-              {
-                x: x(d.expectedBeats),
-                y: mid - d.errorMs / 15
-              }, {
-                x: x(d.expectedBeats + seq.noteSize) - (x(d.expectedBeats + seq.noteSize) - x(d.expectedBeats)) / 2,
-                y: mid
-              }, {
-                x: x(d.expectedBeats + seq.noteSize),
-                y: mid
-              }
-            ]);
+        enter.append('line').attr({
+          x1: function(d) {
+            return x(d.expectedBeats);
           },
-          stroke: colorGrad,
-          fill: 'transparent'
+          x2: function(d) {
+            return x(d.expectedBeats + seq.noteSize);
+          },
+          y1: function(d) {
+            return mid - min(max(-10, d.errorMs / 5), 10);
+          },
+          y2: function(d) {
+            return mid + min(max(-10, d.errorMs / 5), 10);
+          },
+          stroke: gradColor
         });
         return update.exit().remove();
       };

@@ -1,7 +1,3 @@
-
-
-
-
 Theory = { }
 do ->
 	notes = [
@@ -145,4 +141,6 @@ do ->
 	# d 'ix', _.indexOf(pitches, 261.63)
 	# d Theory.pitchForKey 60
 	Theory.nameForKey = (key, withNumber) -> notes[key % 12] + if withNumber then '' + Math.floor(key/12) - 1 else ''
+
+	Theory.notes = notes
 

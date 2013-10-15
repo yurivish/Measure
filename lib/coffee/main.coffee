@@ -1,6 +1,53 @@
 instrument = initInstrument()
 
+
 _.defer ->
+	d 'Initializing key exercise.'
+	rnote = -> Theory.notes[~~(12 * Math.random())]
+	rseq = (n) -> 
+		seq = [rnote()]
+		while seq.length < n 
+			note = rnote()
+			seq.push note if note != seq[seq.length - 1]
+		seq
+
+	go = ->
+		d 'waiting for', name
+		key = 60 + _.indexOf(Theory.notes, name)
+		Metronome.playNoteAt Theory.pitchForKey(key), 0
+
+		waitForKey = (expected) ->
+			makePromise (defer) ->		
+				instrument.watchOnce 'keydown', (e) ->
+					pressed = Theory.nameForKey(e.key)
+					if pressed == expected
+						defer.resolve pressed
+					else
+						d 'Rejecting'
+						defer.reject [expected, pressed]
+
+
+		play = (seq) ->
+			d 'Play', seq...
+			p = waitForKey(seq[0])
+			for name in seq[1..]
+				do (name) ->
+					p = p.then((pressed) -> d(pressed + '...'); waitForKey(name))
+
+			p.then(
+				(pressed) ->
+					d '%cSUCCESS!', 'color: #00b600; font-weight: bold;'
+					play rseq(seq.length)
+				([pressed, expected]) ->
+					d "%cWRONG! #{pressed} != #{expected}.", 'font-weight: bold; color: #ff0012'
+					play(seq)
+			)
+		
+		play rseq(1)
+
+	go()
+
+->
 	d 'Starting'
 
 	vis = d3.select('#piece')
@@ -12,7 +59,7 @@ _.defer ->
 			Theory.major(60)
 			Theory.major(72)
 			72 + 12 # Top C
-			null 		# Rest
+			null 	# Rest
 			72 + 12 # Top C
 			Theory.major(72).reverse()
 			Theory.major(60).reverse()
@@ -62,9 +109,8 @@ _.defer ->
 
 		start(seq, bpm)
 			.on('start', ->
-				# NOTE: Is this slightly out of sync because we didn't compensate
-				# for the time take to get to this line of code?
-				Metronome.start(120, seq)
+				pitches = (Theory.pitchForKey(note.key) for note in seq.notes by seq.beatSize / seq.noteSize)
+				Metronome.start(120, pitches)
 			).on('update', (played) ->
 				errorVis.played(played))
 			.on('end', ->
@@ -222,25 +268,21 @@ M = {
 		}
 
 
-		colorThreshScale = d3.scale.threshold()
-			.domain([-10, 10])
-			.range(['#00b6ff', '#00fa00', '#ff0012'])
-		colorThreshold = (d) -> colorThreshScale(d.errorMs)
+		solidColor = do ->
+			colorScale = d3.scale.threshold()
+				.domain([-10, 10])
+				.range(['#00b6ff', '#00fa00', '#ff0012'])
+			(d) -> colorScale(d.errorMs)
 
-		colorGradScale = d3.scale.linear()
-			.domain([-50, 0, 50])
-			.range(['#009eff', '#fff', '#ff0000'])
-			.interpolate(d3.interpolateLab)
-			.clamp(true)
-		colorGrad = (d) -> colorGradScale(d.errorMs)
+		gradColor = do ->
+			colorScale = d3.scale.linear()
+				.domain([-50, 0, 50])
+				.range(['#009eff', '#fff', '#ff0000'])
+				.interpolate(d3.interpolateLab)
+				.clamp(true)
+			(d) -> colorScale(d.errorMs)
 
 		x = d3.scale.linear()
-
-		line = d3.svg.line()
-			.x((d) -> d.x)
-			.y((d) -> d.y)
-			.interpolate('cardinal')
-			.tension(.4)
 
 		render = ->
 			seq = opts.seq
@@ -261,20 +303,19 @@ M = {
 				y: 0
 				height: M.majorTickSize
 				width: (d) -> Math.max 1, Math.abs x(d.errorBeats) - x(0)
-				stroke: colorThreshold
-				fill: colorThreshold
+				stroke: solidColor
+				fill: solidColor
 			)
 			
-			# NOTE: Can stack up all the wiggly lines and make a 'boquet'
+			# Angled lines to communicate the degree of error
+			{ min, max } = Math
 			mid = (M.majorTickSize + M.noteTop) / 2
-			enter.append('path').attr(
-				d: (d) -> line([
-					{ x: x(d.expectedBeats), y: mid - d.errorMs / 15 } # 5
-					{ x: x(d.expectedBeats + seq.noteSize) - (x(d.expectedBeats + seq.noteSize) - x(d.expectedBeats)) / 2, y: mid }
-					{ x: x(d.expectedBeats + seq.noteSize), y: mid }
-				])
-				stroke: colorGrad
-				fill: 'transparent'
+			enter.append('line').attr(
+				x1: (d) -> x(d.expectedBeats)
+				x2: (d) -> x(d.expectedBeats + seq.noteSize)
+				y1: (d) -> mid - min(max(-10, d.errorMs / 5), 10)
+				y2: (d) -> mid + min(max(-10, d.errorMs / 5), 10)
+				stroke: gradColor
 			)
 
 			update.exit().remove()
