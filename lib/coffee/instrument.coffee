@@ -8,6 +8,7 @@ initInstrument = ->
 	navigator.requestMIDIAccess().then(
 		(midi) ->
 			inputs = midi.inputs()
+			d inputs
 			if inputs.length
 				inputs[0].onmidimessage = (e) ->
 					[cmd, key, velocity] = e.data

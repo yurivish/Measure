@@ -43,11 +43,11 @@ _.defer ->
 					play(seq)
 			)
 		
-		play rseq(1)
+		play rseq(3)
 
 	go()
 
-->
+->#_.defer ->
 	d 'Starting'
 
 	vis = d3.select('#piece')
@@ -73,7 +73,7 @@ _.defer ->
 
 		beatsPerMeasure: 4 		# Numerator of time signature
 		beatSize: 0.25 			# Denominator of time signature
-		noteSize: 0.25			# Indirectly specifies the number of notes in a beat
+		noteSize: 0.125			# Indirectly specifies the number of notes in a beat
 	}
 	sequence.beats = Math.ceil sequence.notes.length * (sequence.noteSize / sequence.beatSize)
 

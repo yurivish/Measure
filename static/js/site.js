@@ -125,6 +125,7 @@
     navigator.requestMIDIAccess().then(function(midi) {
       var inputs;
       inputs = midi.inputs();
+      d(inputs);
       if (inputs.length) {
         inputs[0].onmidimessage = function(e) {
           var cmd, key, velocity, _ref1;
@@ -352,7 +353,7 @@
           return play(seq);
         });
       };
-      return play(rseq(1));
+      return play(rseq(3));
     };
     return go();
   });
@@ -390,7 +391,7 @@
       ],
       beatsPerMeasure: 4,
       beatSize: 0.25,
-      noteSize: 0.25
+      noteSize: 0.125
     };
     sequence.beats = Math.ceil(sequence.notes.length * (sequence.noteSize / sequence.beatSize));
     loadSequence = function(seq) {
